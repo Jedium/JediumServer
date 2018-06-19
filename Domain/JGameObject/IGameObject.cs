@@ -6,6 +6,9 @@ using Domain.BehaviourMessages;
 namespace Domain
 {
     //"сетевой" 3d обьект
+    /// <summary>
+    /// Server-side GameObject interface
+    /// </summary>
     public partial interface IGameObject : IAbstractActor
     {
        
@@ -35,12 +38,18 @@ namespace Domain
         Task SetAvatarProps(string props);
     }
 
+    /// <summary>
+    /// Internal. Used to reference GameObject from itself and components.
+    /// </summary>
     public interface IGameObjectSelfAccessor
     {
         void SendMessageToRegisteredClients(Guid excludeId, JediumBehaviourMessage message);
         void SendMessagePackToRegisteredClients(Guid excludeId, JediumBehaviourMessage[] messages);
     }
 
+    /// <summary>
+    /// Snapshot
+    /// </summary>
     public class ObjectSnapshot
     {
        public Dictionary<string, JediumBehaviourSnapshot> Snapshots;

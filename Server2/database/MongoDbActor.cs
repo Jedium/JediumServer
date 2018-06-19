@@ -107,6 +107,8 @@ namespace Server2.database
         #region Behaviour
         async Task IDatabaseAgent.StoreDBBehaviour(JediumBehaviourDBSnapshot snap)
         {
+            if (snap.SaveOnShutdown)
+            {
             var filter = Builders<JediumBehaviourDBSnapshot>.Filter.And(
                 Builders<JediumBehaviourDBSnapshot>.Filter.Eq("LocalId", snap.LocalId),
                 Builders<JediumBehaviourDBSnapshot>.Filter.Eq("Type", snap.Type));
@@ -125,6 +127,7 @@ namespace Server2.database
             catch (Exception e)
             {
                 _logger.Error(e.Message);
+                }
             }
         }
 

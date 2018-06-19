@@ -32,5 +32,6 @@ namespace DomainInternal.Behaviours
     {
         public Guid LocalId;
         public string Type;
+        public bool SaveOnShutdown = false;
     }
 }
