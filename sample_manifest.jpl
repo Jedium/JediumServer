@@ -1,0 +1,7 @@
+{
+  "Name": "SomeName",
+  "Version": "1.0",
+  "ServerDLL": "SomeDLL.dll",
+  "ClientDLL": "SomeDll.dll",
+  "SharedDLL": "Somedll.dll"
+}

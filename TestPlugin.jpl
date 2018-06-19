@@ -1,0 +1,7 @@
+{
+  "Name": "TestPlugin",
+  "Version": "1.0",
+  "ServerDLL": "TestComponentLibrary.dll",
+  "ClientDLL": "TestComponentLibrary.Unity3D.dll",
+  "SharedDLL": "TestComponentLibrary.Shared.dll"
+}

@@ -1,0 +1,22 @@
+# Visual Studio 2015 cache directory
+/.vs/
+
+*.bak
+*.pdb
+*.zip
+
+# Unity3D generated meta files
+*.pidb.meta
+*.orig
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+[Oo]bj/
+[Ll]og/
+*.cache
+*.CopyComplete
+[Bb]in/
+packages/
