@@ -20,3 +20,6 @@
 *.CopyComplete
 [Bb]in/
 packages/
+/doc/Output
+/doc/html
+/doc/latex

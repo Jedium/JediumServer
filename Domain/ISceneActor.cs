@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace Domain
 {
+    /// <summary>
+    /// Scene actor.
+    /// </summary>
     public interface ISceneActor : IAbstractActor
     {
         Task<string> GetServerName();

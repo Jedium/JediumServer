@@ -4,6 +4,10 @@ using Akka.Interfaced;
 
 namespace Domain
 {
+    /// <summary>
+    /// Basic class for almost all actors.
+    /// Implements LocalID and OwnerID properties.
+    /// </summary>
     public abstract class AbstractActor : InterfacedActor, IAbstractActor
     {
         protected AbstractActor(Guid localID, Guid ownerID)
@@ -16,11 +20,19 @@ namespace Domain
         public Guid _ownerID { get; }
 
 
+        /// <summary>
+        /// Get LocalID
+        /// </summary>
+        /// <returns></returns>
         async Task<Guid> IAbstractActor.GetGuid()
         {
             return _localID;
         }
 
+        /// <summary>
+        /// Get OwnerID
+        /// </summary>
+        /// <returns></returns>
         async Task<Guid> IAbstractActor.GetOwnerId()
         {
             return _ownerID;
