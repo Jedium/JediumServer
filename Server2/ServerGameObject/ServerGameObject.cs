@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Interfaced;
+using Akka.Remote;
+using Akka.Util.Internal;
 using Domain;
 using Domain.BehaviourMessages;
 using DomainInternal;
@@ -10,18 +14,23 @@ using Server2.Behaviours;
 
 namespace Server2
 {
-    public partial class ServerGameObject : AbstractActor, IGameObject, IGameObjectSelfAccessor
+    public partial class ServerGameObject : InterfacedActor, IGameObject, IGameObjectSelfAccessor,IAbstractActor
     {
         private readonly IConnection _connection;
 
         private readonly Guid _avatarId;
 
+        private readonly Guid _localId;
+        private readonly Guid _ownerId;
+
         private readonly string _avatarProps;
 
-        //TODO - move to abstract?
+        //private const int MAX_PACKETS = 10;
+
+      
         private readonly Guid _bundleId;
-        private readonly Dictionary<Guid, IGameObjectObserver> _clients;
-        private readonly IDatabaseAgent _database;
+        private readonly Dictionary<Guid, ClientConnectionHolderRef> _clients;
+        private readonly DatabaseAgentRef _database;
         private readonly JediumGameObject _gameObject;
         private readonly ILogger _log;
         private readonly string _nameNotOwnedPrefab;
@@ -29,28 +38,36 @@ namespace Server2
 
         private readonly Guid _userId;
 
-        async Task IGameObject.UnregisterClient(Guid clientid)
+
+        Task IGameObject.UnregisterClient(Guid clientid)
         {
             _log.Warn("Unregistering client:" + clientid);
             if (_clients.ContainsKey(clientid))
                 _clients.Remove(clientid);
+
+            return Task.FromResult(true);
         }
 
 
-        async Task IGameObject.DestroyObject()
+         Task IGameObject.DestroyObject()
         {
-            foreach (var cln in _clients) cln.Value.DestroyObject();
+            foreach (var cln in _clients)
+        {
+                Console.WriteLine("___DESTROY0 FOR:" + cln.Key);
+                cln.Value.Stop().Wait();
+            }
+         
 
             Context.Stop(Self);
-            //Self.Tell(InterfacedPoisonPill.Instance,Self);
+            return Task.FromResult(true);
         }
 
-        async Task IGameObject.SaveToDB()
+         Task IGameObject.SaveToDB()
         {
-            _log.Warn("______STORING TO DB");
             PostStop();
             List<JediumBehaviourDBSnapshot> snaps = _gameObject.GetDbSnapshots();
             foreach (var s in snaps) _database.StoreDBBehaviour(s).Wait();
+            return Task.FromResult(true);
         }
 
         #region Ctors
@@ -69,21 +86,24 @@ namespace Server2
         /// <param name="avProps">Avatar properties. Should be JSON.</param>
         /// <param name="additionalBehavioursNamed">Additional behaviours by typename. Currently unused.</param>
         /// <param name="additionalBehaviours">Collection of additional behaviours by snapshots</param>
-        public ServerGameObject(IConnection conn, IDatabaseAgent database, string namePrefab, string nameNotOwnedPrefab,
+        public ServerGameObject(IConnection conn, DatabaseAgentRef database, string namePrefab, string nameNotOwnedPrefab,
             Guid localId, Guid ownerID,
             Guid bundleId, Guid avatarId, Guid userId, string avProps,
             List<string> additionalBehavioursNamed, List<JediumBehaviourSnapshot> additionalBehaviours
-        ) : base(localId, ownerID)
+        ) 
         {
             _log = LogManager.GetLogger("Object: " + localId + ", prefab:" + namePrefab);
-
+            _localId = localId;
             _bundleId = bundleId;
             _avatarId = avatarId;
-            _clients = new Dictionary<Guid, IGameObjectObserver>();
+            _clients = new Dictionary<Guid, ClientConnectionHolderRef>();
             _connection = conn;
             _database = database;
             _namePrefab = namePrefab;
             _nameNotOwnedPrefab = nameNotOwnedPrefab;
+            _ownerId = ownerID;
+
+
            
             Dictionary<string, JediumBehaviourDBSnapshot> dbsnaps = _database.GetObjectBehaviours(_localID).Result;
 
@@ -103,11 +123,21 @@ namespace Server2
             _gameObject = new JediumGameObject(this, additionalBehaviours, dbsnaps, _ownerID, _localID);
 
 
-            conn.SpawnGameObject(_namePrefab, _nameNotOwnedPrefab, localId, ownerID, _bundleId, avatarId, this,
-                Self.ToString()).Wait();
+            conn.SpawnGameObject(_namePrefab, _nameNotOwnedPrefab, localId, ownerID, _bundleId, avatarId, this
+).Wait();
 
             MessageNum = 0;
-            _log.Info(" is online, address: " + Self);
+            _log.Info(" is online, address: " + GetRemoteAddress());
+
+           
+        }
+
+        protected string GetRemoteAddress()
+              {
+                  Address addr = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider
+                      .AsInstanceOf<RemoteActorRefProvider>().DefaultAddress;
+        
+                  return Self.Path.ToStringWithAddress(addr);
         }
 
 
@@ -116,26 +146,15 @@ namespace Server2
             return Self.ToString();
         }
 
-        //UNUSED
-        public ServerGameObject(IConnection conn, IDatabaseAgent database, string namePrefab) : base(
-            GenerateGuids.GetActorGuid(TYPEACTOR.RANDOM), GenerateGuids.GetActorGuid(TYPEACTOR.EMPTY))
-        {
-            _clients = new Dictionary<Guid, IGameObjectObserver>();
-            _connection = conn;
-            _database = database;
 
-
-            conn.SpawnGameObject(namePrefab, namePrefab, _localID, _ownerID, Guid.Empty, Guid.Empty, this,
-                Self.ToString()).Wait();
-        }
 
         #endregion
 
         #region Implement Interface IGameObject
 
-        async Task<Guid> IGameObject.GetBundleId()
+        Task<Guid> IGameObject.GetBundleId()
         {
-            return _bundleId;
+            return Task.FromResult(_bundleId);
         }
 
         async Task<Guid> IGameObject.GetAvatarId()
@@ -143,69 +162,109 @@ namespace Server2
             return _avatarId;
         }
 
-        async Task<string> IGameObject.GetNameOfPrefab()
+        Task<string> IGameObject.GetNameOfPrefab()
         {
-            return _namePrefab;
+            return  Task.FromResult(_namePrefab);
         }
 
-        async Task<string> IGameObject.GetNameOfOthersPrefab()
+        Task<string> IGameObject.GetNameOfOthersPrefab()
         {
-            return _nameNotOwnedPrefab;
+            return Task.FromResult(_nameNotOwnedPrefab);
         }
 
-        async Task<string> IGameObject.GetServerAddress()
+        Task<string> IGameObject.GetServerAddress()
         {
-            return Self.ToString();
+
+            string defaddress = GetRemoteAddress();//Self.ToString();
+           
+            return Task.FromResult(defaddress);
         }
 
-        async Task<ObjectSnapshot> IGameObject.GetSnapshot()
+        Task<ObjectSnapshot> IGameObject.GetSnapshot()
         {
             var snap = _gameObject.GetSnapshot();
 
-            return snap;
+            return Task.FromResult(snap);
         }
 
         #region Сервер агент обьекта цикл: рассылка состояний всем клиентам
 
-        async Task IGameObject.SendBehaviourMessageToServer(Guid clientId, JediumBehaviourMessage message)
+        //todo - maybe handler
+        Task IGameObject.SendBehaviourMessageToServer(Guid clientId, JediumBehaviourMessage message)
         {
             _gameObject.ProcessComponentMessage(clientId, message);
+
+            return Task.FromResult(true);
         }
 
-        async Task IGameObject.SendBehaviourMessagePackToServer(Guid clientId, JediumBehaviourMessage[] messages)
+        Task IGameObject.SendBehaviourMessagePackToServer(Guid clientId, JediumBehaviourMessage[] messages)
         {
             if (MainSettings.CollectMessageStats)
                 MessageNum = MessageNum + messages.Length;
+
+            Console.WriteLine("___MESSAGEPACK");
             _gameObject.ProcessBehaviourMessagePack(clientId, messages);
+
+            return Task.FromResult(true);
         }
 
-        async Task<string> IGameObject.GetAvatarProps()
+        
+
+         Task<string> IGameObject.GetAvatarProps()
         {
-            return _avatarProps;
+            return Task.FromResult(_avatarProps);
         }
 
-        async Task IGameObject.SetAvatarProps(string props)
+        Task IGameObject.SetAvatarProps(string props)
         {
             _log.Info($"Setting avatar props:{props}");
 
             _database.UpdateAvatarProps(_userId, props).Wait();
+
+            return Task.FromResult(true);
         }
 
+        void IGameObjectSelfAccessor.SendMessagePackToProcess(Guid clientId, JediumBehaviourMessage[] msg)
+        {
 
+            _gameObject.ProcessBehaviourMessagePack(clientId, msg);
+        }
         
+        //UNUSED
         void IGameObjectSelfAccessor.SendMessageToRegisteredClients(Guid excludeId, JediumBehaviourMessage message)
         {
-            foreach (var client in _clients)
-                if (client.Key != excludeId || excludeId == Guid.Empty)
-                    client.Value.SendBehaviourMessageToClient(message);
+           // foreach (var client in _clients)
+           //     if (client.Key != excludeId || excludeId == Guid.Empty)
+           //         client.Value.SendBehaviourMessageToClient(message);
         }
 
         void IGameObjectSelfAccessor.SendMessagePackToRegisteredClients(Guid excludeId,
             JediumBehaviourMessage[] messages)
         {
+            
+           
             foreach (var client in _clients)
-                if (client.Key != excludeId || excludeId == Guid.Empty)
-                    client.Value.SendBehaviourMessagePackToClient(messages);
+                if (client.Key != excludeId)
+                {
+                   client.Value.CastToIActorRef().Tell(new PackToConnection()
+                   {
+                       Messages = messages
+                   });
+                }
+                
+        }
+
+        public class PackToConnection
+        {
+
+            public JediumBehaviourMessage[] Messages;
+        }
+
+        //UNUSED
+        Task IGameObject.TickBehaviours()
+        {
+            
+            return Task.FromResult(true);
         }
 
        
@@ -215,18 +274,34 @@ namespace Server2
 
         #region Server: Регистрация объекта с клиентским объектом
 
-        async Task IGameObject.RegisterClient(Guid clientid, IGameObjectObserver client)
+         Task IGameObject.RegisterClient(Guid clientid, IGameObjectObserver client)
         {
             _log.Info("Registering client:" + clientid);
 
             if (_clients.ContainsKey(clientid))
                 _log.Error("Client with this id already exists!");
             else
-                _clients.Add(clientid, client);
+            {
+                var holder = Context.ActorOf(Props.Create(() => new ClientConnectionHolder(client, clientid,this)))
+                    .Cast<ClientConnectionHolderRef>();
+                _clients.Add(clientid, holder);
+            }
+
+            return Task.FromResult(true);
         }
 
         #endregion
 
         #endregion
+
+        Task<Guid> IAbstractActor.GetGuid()
+        {
+            return Task.FromResult(_localId);
+        }
+
+        Task<Guid> IAbstractActor.GetOwnerId()
+        {
+            return Task.FromResult(_ownerId);
+        }
     }
 }

@@ -22,6 +22,12 @@ namespace Server2.Web
         }
 
         [HttpGet]
+        public string Test()
+        {
+            return "Asset handler is online";
+        }
+
+        [HttpGet]
         public string BundleHash(string id)
         {
             Guid bid;

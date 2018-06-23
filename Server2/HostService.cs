@@ -23,7 +23,7 @@ namespace Server2
     //Основной сервер
     public class HostService : IOwinService
     {
-        private IDatabaseAgent _databaseAgent;
+        private DatabaseAgentRef _databaseAgent;
 
         private ILog _logger;
         private IObjectsManager _manager;
@@ -46,34 +46,39 @@ namespace Server2
 
             //settings
             var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile("ServerConfig.ini");
+            IniData data = parser.ReadFile("config\\ServerConfig.ini");
             MainSettings.BehavioursPluginPath = data["Server"]["BehavioursPluginPath"];
             MainSettings.WebApiHost = data["Server"]["WebApiHost"];
             MainSettings.DBUrl = data["Server"]["DBUrl"];
             MainSettings.DatabaseName = data["Server"]["DatabaseName"];
             MainSettings.CollectMessageStats = bool.Parse(data["Statistics"]["CollectMessageStats"]);
             MainSettings.StatsCollectionInterval = int.Parse(data["Statistics"]["StatsCollectionInterval"]);
+            MainSettings.mainURL = data["Server"]["MainURL"];
+            MainSettings.TickDelay =int.Parse( data["Server"]["TickDelay"]);
 
-
+            _logger.Warn("___TICK DELAY:"+MainSettings.TickDelay);
             MD5 mcalc = MD5.Create();
             byte[] dbytes = File.ReadAllBytes("Domain.dll");
             MainSettings.ServerHash = mcalc.ComputeHash(dbytes).ToHex(false);
             _logger.Info($"Server domain hash: {MainSettings.ServerHash}");
 
             //load plugins
-            BehaviourManager.LoadBehaviours(MainSettings.BehavioursPluginPath);
-
+           // BehaviourManager.LoadBehaviours(MainSettings.BehavioursPluginPath);
 
            
             //get config (app.config)
             AkkaConfigurationSection section = (AkkaConfigurationSection) ConfigurationManager.GetSection("akka");
+
+            //_logger.Info();
             Config aconfig = section.AkkaConfig;
 
+            Config localConfig = ConfigurationFactory.ParseString("akka.remote.helios.tcp.hostname = "+MainSettings.mainURL)
+                .WithFallback(aconfig);
 
             //попытаться запустить актер сервера
             try
             {
-                _system = ActorSystem.Create("VirtualFramework", aconfig);
+                _system = ActorSystem.Create("VirtualFramework", localConfig);
             }
             catch (Exception ex)
             {
@@ -94,7 +99,7 @@ namespace Server2
 
             _serverConnection = _system
                 .ActorOf(Props.Create(() => new ServerConnection(_databaseAgent)), "ServerEndpoint")
-                .Cast<ConnectionRef>(); //TODO: find me
+                .Cast<ConnectionRef>(); 
 
             //_databaseAgent.SetDummyObjectTest().Wait();
 
@@ -113,7 +118,7 @@ namespace Server2
             _pluginsHost = _system.ActorOf(Props.Create(() => new PluginsHost(_databaseAgent, _manager)), "PluginsHost")
                 .Cast<PluginsHostRef>();
 
-            _pluginsHost.LoadPlugins().Wait();
+           // _pluginsHost.LoadPlugins().Wait();
 
 
             _manager.LoadAllScenes().Wait();
@@ -142,13 +147,16 @@ namespace Server2
     public static class MainSettings
     {
         public static string BehavioursPluginPath;
+        public static string mainURL;
         public static string WebApiHost;
         public static string DBUrl;
         public static string DatabaseName;
+        public static int TickDelay;
 
         //stats
         public static bool CollectMessageStats;
         public static int StatsCollectionInterval;
+        
 
         //connection
         public static string ServerHash;

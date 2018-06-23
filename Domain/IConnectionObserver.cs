@@ -33,5 +33,7 @@ namespace Domain
         /// <param name="snap"></param>
         void OnSpawnedGameObject(string namePrefab, string nameNotOwnedPrefab, Guid localId, Guid ownerId,
             Guid bundleId, Guid avatarId, string address, ObjectSnapshot snap);
+
+        void KillOwnedObjects(Guid clientId);
     }
 }

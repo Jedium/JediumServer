@@ -269,13 +269,13 @@
     <Compile Include="database\MongoDbActor.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="HostService.cs" />
-    <Compile Include="database\ObjectBox.cs" />
     <Compile Include="ObjectsManager.cs" />
     <Compile Include="Plugins\PluginsHost.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScriptEngine\IJediumScript.cs" />
     <Compile Include="ScriptEngine\IScriptEngine.cs" />
+    <Compile Include="ServerGameObject\ClientConnectionHolder.cs" />
     <Compile Include="ServerScene\ServerSceneActor.cs" />
     <Compile Include="ServerConnection.cs" />
     <Compile Include="ServerGameObject\ServerGameObject.cs" />

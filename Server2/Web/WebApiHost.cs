@@ -47,7 +47,7 @@ namespace Server2.Web
             _assetsServer = new HttpSelfHostServer(config);
             _assetsServer.OpenAsync().Wait();
 
-            _logger.Info("Started");
+            _logger.Info($"Started at {_mainUrl}");
         }
 
         protected override void PostStop()

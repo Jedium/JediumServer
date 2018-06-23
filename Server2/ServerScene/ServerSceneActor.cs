@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Interfaced;
@@ -10,18 +11,22 @@ using DomainInternal;
 namespace Server2
 {
    
-    class ServerSceneActor : AbstractActor, ISceneActor
+    class ServerSceneActor :InterfacedActor, ISceneActor,IAbstractActor
     {
         private readonly ILog _logger;
         private readonly Guid _bundleId;
         private readonly IConnection _conn;
-        private readonly IDatabaseAgent _database;
+        private readonly DatabaseAgentRef _database;
         private readonly string _sceneName;
         private readonly string _serverName;
+        private readonly Guid _localId;
+        private readonly Guid _ownerId;
         private Dictionary<Guid, Tuple<DatabaseObject, IGameObject>> sceneObjects;
 
-        public ServerSceneActor(DatabaseScene dscene, IDatabaseAgent database, IConnection conn)
-            : base(dscene.LocalId, GenerateGuids.GetActorGuid(TYPEACTOR.EMPTY))
+     
+
+        public ServerSceneActor(DatabaseScene dscene, DatabaseAgentRef database, IConnection conn)
+           
         {
             _logger = LogManager.GetLogger($"[Scene: {dscene.ServerName}]");
             _serverName = dscene.ServerName;
@@ -29,29 +34,36 @@ namespace Server2
             _bundleId = dscene.BundleId;
             _database = database;
             _conn = conn;
+            _localId = dscene.LocalId;
+            _ownerId = Guid.Empty;
 
-            _logger.Info("is online");
+
         }
 
-        async Task<string> ISceneActor.GetServerName()
+    
+
+        Task<string> ISceneActor.GetServerName()
         {
-            return _serverName;
+            return Task.FromResult(_serverName);
+
+
         }
 
-        async Task<string> ISceneActor.GetSceneName()
+        Task<string> ISceneActor.GetSceneName()
         {
-            return _sceneName;
+            return Task.FromResult(_sceneName);
         }
 
-        async Task<Guid> ISceneActor.GetBundleId()
+        Task<Guid> ISceneActor.GetBundleId()
         {
-            return _bundleId;
+            return Task.FromResult(_bundleId);
         }
 
 
+        //possible
         async Task ISceneActor.LoadSceneObjects()
         {
-            var objects = await _database.GetObjectsScene(_localID);
+              var objects = await _database.GetObjectsScene(_localId);
 
 
             sceneObjects = new Dictionary<Guid, Tuple<DatabaseObject, IGameObject>>();
@@ -76,11 +88,13 @@ namespace Server2
 
                 _logger.Info("sceneObjects: " + dbObj.Name);
             }
+
+            _logger.Info("is online");
         }
 
         #region Комната: вызов спавна каждого обьекта через IConnectionObserver
 
-        async Task ISceneActor.PushObjectsToClient(Guid clientId, IConnectionObserver client)
+        Task ISceneActor.PushObjectsToClient(Guid clientId, IConnectionObserver client)
         {
             foreach (var obj in sceneObjects)
             {
@@ -92,32 +106,47 @@ namespace Server2
                     obj.Value.Item2.GetAvatarId().Result, obj.Value.Item2.GetServerAddress().Result,
                     obj.Value.Item2.GetSnapshot().Result);
             }
+
+            return Task.FromResult(true);
         }
 
         #endregion
 
-        async Task ISceneActor.LogoutClient(Guid clientId)
+        Task ISceneActor.LogoutClient(Guid clientId)
         {
             foreach (var obj in sceneObjects) obj.Value.Item2.UnregisterClient(clientId).Wait();
+
+            return Task.FromResult(true);
         }
 
         #region Stats
 
-        async Task<List<Tuple<Guid, string>>> ISceneActor.GetSceneObjects()
+        Task<List<Tuple<Guid, string>>> ISceneActor.GetSceneObjects()
         {
             List<Tuple<Guid, string>> ret = new List<Tuple<Guid, string>>();
 
             foreach (var obj in sceneObjects)
                 ret.Add(new Tuple<Guid, string>(obj.Key, obj.Value.Item2.GetNameOfPrefab().Result));
 
-            return ret;
+            return Task.FromResult(ret);
         }
 
         #endregion
 
+        //TODO - async
         async Task ISceneActor.SaveObjectsToDB()
         {
             foreach (var obj in sceneObjects) await obj.Value.Item2.SaveToDB();
+        }
+
+        Task<Guid> IAbstractActor.GetGuid()
+        {
+            return Task.FromResult(_localId);
+        }
+
+        Task<Guid> IAbstractActor.GetOwnerId()
+        {
+            return Task.FromResult(_ownerId);
         }
     }
 }

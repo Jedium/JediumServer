@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Akka.Interfaced;
 using Common.Logging;
 using Domain;
 using DomainInternal;
@@ -13,7 +14,7 @@ using Server2.Behaviours;
 
 namespace Server2.database
 {
-    public class MongoDbActor : AbstractActor, IDatabaseAgent
+    public class MongoDbActor :InterfacedActor, IDatabaseAgent
     {
         private static bool _typesRegistered;
         private readonly ILog _logger;
@@ -21,8 +22,7 @@ namespace Server2.database
         private readonly MongoClient client;
         private readonly IMongoDatabase database;
 
-        public MongoDbActor() : base(GenerateGuids.GetActorGuid(TYPEACTOR.DATABASE),
-            GenerateGuids.GetActorGuid(TYPEACTOR.EMPTY))
+        public MongoDbActor()
         {
             _logger = LogManager.GetLogger("[MongoDB]");
             //  client = new MongoClient("mongodb://localhost:27017");
@@ -54,20 +54,21 @@ namespace Server2.database
 
         #region Avatar
 
-        async Task<DatabaseAvatar> IDatabaseAgent.GetAvatar(Guid avatarId)
+        Task<DatabaseAvatar> IDatabaseAgent.GetAvatar(Guid avatarId)
         {
             var collection = database.GetCollection<DatabaseAvatar>("avatars");
             var filter = Builders<DatabaseAvatar>.Filter.Eq("AvatarId", avatarId);
 
             var document = collection.Find(filter).FirstOrDefault();
 
-            return document;
+            return  Task.FromResult(document);
         }
 
-        async Task IDatabaseAgent.CreateAvatar(DatabaseAvatar avatar)
+        Task IDatabaseAgent.CreateAvatar(DatabaseAvatar avatar)
         {
             var collection = database.GetCollection<DatabaseAvatar>("avatars");
             collection.InsertOne(avatar);
+            return Task.FromResult(true);
         }
 
         #endregion
@@ -88,24 +89,25 @@ namespace Server2.database
             return null;
         }
 
-        async Task<List<DatabaseAssetBundle>> IDatabaseAgent.GetAllBundles()
+         Task<List<DatabaseAssetBundle>> IDatabaseAgent.GetAllBundles()
         {
             var collection = database.GetCollection<DatabaseAssetBundle>("bundles");
 
             var bundles = collection.Find(_ => true).ToList();
-            return bundles;
+            return Task.FromResult(bundles);
         }
 
-        async Task IDatabaseAgent.SaveAssetBundle(DatabaseAssetBundle bundle)
+         Task IDatabaseAgent.SaveAssetBundle(DatabaseAssetBundle bundle)
         {
             var collection = database.GetCollection<DatabaseAssetBundle>("bundles");
             collection.InsertOne(bundle);
+            return Task.FromResult(true);
         }
         #endregion
 
 
         #region Behaviour
-        async Task IDatabaseAgent.StoreDBBehaviour(JediumBehaviourDBSnapshot snap)
+         Task IDatabaseAgent.StoreDBBehaviour(JediumBehaviourDBSnapshot snap)
         {
             if (snap.SaveOnShutdown)
             {
@@ -113,8 +115,7 @@ namespace Server2.database
                 Builders<JediumBehaviourDBSnapshot>.Filter.Eq("LocalId", snap.LocalId),
                 Builders<JediumBehaviourDBSnapshot>.Filter.Eq("Type", snap.Type));
 
-            try
-            {
+               
                 var collection = database.GetCollection<JediumBehaviourDBSnapshot>("newbehaviours");
 
                 var document = collection.Find(filter).FirstOrDefault();
@@ -123,15 +124,13 @@ namespace Server2.database
                     collection.ReplaceOne(filter, snap);
                 else
                     collection.InsertOne(snap);
+               
             }
-            catch (Exception e)
-            {
-                _logger.Error(e.Message);
-                }
-            }
+
+            return Task.FromResult(true);
         }
 
-        async Task<Dictionary<string, JediumBehaviourDBSnapshot>> IDatabaseAgent.GetObjectBehaviours(Guid localId)
+         Task<Dictionary<string, JediumBehaviourDBSnapshot>> IDatabaseAgent.GetObjectBehaviours(Guid localId)
         {
             var filter = Builders<JediumBehaviourDBSnapshot>.Filter.Eq("LocalId", localId);
 
@@ -144,102 +143,110 @@ namespace Server2.database
 
             foreach (var d in documents) ret.Add(d.Type, d);
 
-            return ret;
+            return Task.FromResult(ret);
         }
         #endregion
 
         #region ServerObject
-        async Task<DatabaseObject> IDatabaseAgent.GetObjectServer(Guid objectId)
+         Task<DatabaseObject> IDatabaseAgent.GetObjectServer(Guid objectId)
         {
             var filter = Builders<DatabaseObject>.Filter.Eq("ObjectId", objectId.ToString());
             var collection = database.GetCollection<DatabaseObject>("objects");
 
             var document = collection.Find(filter).FirstOrDefault();
 
-            return document;
+            return Task.FromResult(document);
         }
 
-        async Task IDatabaseAgent.CreateObjectServer(DatabaseObject dobject)
+       Task IDatabaseAgent.CreateObjectServer(DatabaseObject dobject)
         {
             var collection = database.GetCollection<DatabaseObject>("objects");
             collection.InsertOne(dobject);
+
+            return Task.FromResult(true);
         }
 
         #endregion
 
 
         #region SceneObject
-        async Task<List<DatabaseSceneObject>> IDatabaseAgent.GetObjectsScene(Guid sceneId)
+        Task<List<DatabaseSceneObject>> IDatabaseAgent.GetObjectsScene(Guid sceneId)
         {
             var filter = Builders<DatabaseSceneObject>.Filter.Eq("SceneID", sceneId);
             var collection = database.GetCollection<DatabaseSceneObject>("sceneObjects");
 
             var document = collection.Find(filter).ToList();
             
-            return document;
+            return Task.FromResult(document);
         }
 
-        async Task IDatabaseAgent.AddSceneObject(DatabaseSceneObject sceneObj)
+        Task IDatabaseAgent.AddSceneObject(DatabaseSceneObject sceneObj)
         {
             var collection = database.GetCollection<DatabaseSceneObject>("sceneObjects");
             collection.InsertOne(sceneObj);
+
+            return Task.FromResult(true);
         }
 
         #endregion
 
 
         #region Scene
-        async Task<List<DatabaseScene>> IDatabaseAgent.GetScenes()
+         Task<List<DatabaseScene>> IDatabaseAgent.GetScenes()
         {
             var collection = database.GetCollection<DatabaseScene>("scenes");
             var document = collection.Find(new BsonDocument()).ToList();
 
-            return document;
+            return Task.FromResult(document);
         }
 
-        async Task IDatabaseAgent.CreateScene(DatabaseScene scene)
+         Task IDatabaseAgent.CreateScene(DatabaseScene scene)
         {
             var collection = database.GetCollection<DatabaseScene>("scenes");
             collection.InsertOne(scene);
+            return Task.FromResult(true);
         }
         #endregion
 
 
         #region User
-        async Task<DatabaseUser> IDatabaseAgent.GetUserByName(string username)
+         Task<DatabaseUser> IDatabaseAgent.GetUserByName(string username)
         {
             var collection = database.GetCollection<DatabaseUser>("users");
             var filter = Builders<DatabaseUser>.Filter.Eq("Username", username);
 
             var document = collection.Find(filter).FirstOrDefault();
 
-            return document;
+            return Task.FromResult(document);
         }
 
-        async Task IDatabaseAgent.CreateUser(DatabaseUser user)
+        Task IDatabaseAgent.CreateUser(DatabaseUser user)
         {
             var collection = database.GetCollection<DatabaseUser>("users");
             collection.InsertOne(user);
+            return Task.FromResult(true);
         }
 
-        async Task<List<DatabaseUser>> IDatabaseAgent.GetUsers()
+         Task<List<DatabaseUser>> IDatabaseAgent.GetUsers()
         {
             var collection = database.GetCollection<DatabaseUser>("users");
 
             var document = collection.Find(new BsonDocument()).ToList();
 
-            return document;
+            return Task.FromResult(document);
         }
 
 
 
-        async Task IDatabaseAgent.UpdateAvatarProps(Guid userId, string props)
+        Task IDatabaseAgent.UpdateAvatarProps(Guid userId, string props)
         {
             var collection = database.GetCollection<DatabaseUser>("users");
             var filter = Builders<DatabaseUser>.Filter.Eq("UserId", userId);
 
             var update = Builders<DatabaseUser>.Update.Set("AvatarProps", props);
             collection.UpdateOne(filter, update);
+
+            return Task.FromResult(true);
         }
         #endregion
 
@@ -284,7 +291,7 @@ namespace Server2.database
         }
 
 
-        async Task IDatabaseAgent.SetDummyObjectTest()
+        Task IDatabaseAgent.SetDummyObjectTest()
         {
             _logger.Warn("_________SETTING DUMMY OBJECT");
             // JediumTransformSnapshot tr = new JediumTransformSnapshot(Guid.Parse("67ed8767-b105-4c82-bb5c-f5cc59664101"),1,-1,1,
@@ -304,6 +311,8 @@ namespace Server2.database
             // var collection = database.GetCollection<BsonDocument>("sceneObjects");
             //
             // await collection.UpdateOneAsync(filter, update);
+
+            return Task.FromResult(true);
         }
 
         #endregion

@@ -65,7 +65,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AbstractActor.cs" />
+    <Compile Include="IClientConnectionHolder.cs" />
     <Compile Include="JBehaviours\JediumBehaviourMessages.cs" />
     <Compile Include="JBehaviours\JediumCharacterControllerMessages.cs" />
     <Compile Include="JBehaviours\JediumSitMessage.cs" />

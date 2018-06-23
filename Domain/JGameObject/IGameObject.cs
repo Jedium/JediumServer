@@ -45,6 +45,7 @@ namespace Domain
     {
         void SendMessageToRegisteredClients(Guid excludeId, JediumBehaviourMessage message);
         void SendMessagePackToRegisteredClients(Guid excludeId, JediumBehaviourMessage[] messages);
+        void SendMessagePackToProcess(Guid excludeId, JediumBehaviourMessage[] messages);
     }
 
     /// <summary>

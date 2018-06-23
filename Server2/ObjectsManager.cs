@@ -9,15 +9,14 @@ using DomainInternal;
 
 namespace Server2
 {
-    public class ObjectsManager : AbstractActor, IObjectsManager
+    public class ObjectsManager : InterfacedActor, IObjectsManager
     {
         private readonly ILog _logger;
         private readonly IConnection _conn;
-        private readonly IDatabaseAgent _database;
+        private readonly DatabaseAgentRef _database;
         private Dictionary<Guid, ISceneActor> loadedScenes;
 
-        public ObjectsManager(IDatabaseAgent database, IConnection conn) : base(
-            GenerateGuids.GetActorGuid(TYPEACTOR.OBJECTMANAGER), GenerateGuids.GetActorGuid(TYPEACTOR.EMPTY))
+        public ObjectsManager(DatabaseAgentRef database, IConnection conn) 
         {
             _logger = LogManager.GetLogger("[Objects Manager]");
             _database = database;
@@ -26,10 +25,12 @@ namespace Server2
             _logger.Info("is online");
         }
 
-        async Task IObjectsManager.LoadObjects()
+        Task IObjectsManager.LoadObjects()
         {
+            return Task.FromResult(false);
         }
 
+        //possible
         async Task IObjectsManager.LoadAllScenes()
         {
             var scenesInfo = await _database.GetScenes();
@@ -54,6 +55,7 @@ namespace Server2
             }
         }
 
+        //possible
         async Task IObjectsManager.SaveObjectsToDB()
         {
             foreach (var scene in loadedScenes) await scene.Value.SaveObjectsToDB();
@@ -61,16 +63,17 @@ namespace Server2
 
         #region Stats
 
-        async Task<List<Tuple<Guid, string>>> IObjectsManager.GetLoadedScenesList()
+         Task<List<Tuple<Guid, string>>> IObjectsManager.GetLoadedScenesList()
         {
             List<Tuple<Guid, string>> ret = new List<Tuple<Guid, string>>();
 
             foreach (var scene in loadedScenes)
                 ret.Add(new Tuple<Guid, string>(scene.Key, scene.Value.GetSceneName().Result));
 
-            return ret;
+            return Task.FromResult(ret);
         }
 
+        //TODO - async problem
         async Task<List<Tuple<Guid, string>>> IObjectsManager.GetSceneObjects(Guid scene)
         {
             if (loadedScenes.ContainsKey(scene)) return await loadedScenes[scene].GetSceneObjects();

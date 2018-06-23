@@ -8,8 +8,8 @@
 // ------------------------------------------------------------------------------
 
 using System;
-using Akka.Interfaced;
 using System.Threading.Tasks;
+using Akka.Interfaced;
 using Akka.Actor;
 
 #region Domain.IAbstractActor
@@ -297,6 +297,133 @@ namespace Domain
 }
 
 #endregion
+#region Domain.IClientConnectionHolder
+
+namespace Domain
+{
+    [PayloadTable(typeof(IClientConnectionHolder), PayloadTableKind.Request)]
+    public static class IClientConnectionHolder_PayloadTable
+    {
+        public static Type[,] GetPayloadTypes()
+        {
+            return new Type[,] {
+                { typeof(SendMessagePack_Invoke), null },
+                { typeof(Stop_Invoke), null },
+            };
+        }
+
+        public class SendMessagePack_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public Domain.BehaviourMessages.JediumBehaviourMessage[] messages;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(IClientConnectionHolder);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((IClientConnectionHolder)__target).SendMessagePack(messages);
+                return null;
+            }
+        }
+
+        public class Stop_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public Type GetInterfaceType()
+            {
+                return typeof(IClientConnectionHolder);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((IClientConnectionHolder)__target).Stop();
+                return null;
+            }
+        }
+    }
+
+    public interface IClientConnectionHolder_NoReply
+    {
+        void SendMessagePack(Domain.BehaviourMessages.JediumBehaviourMessage[] messages);
+        void Stop();
+    }
+
+    public class ClientConnectionHolderRef : InterfacedActorRef, IClientConnectionHolder, IClientConnectionHolder_NoReply
+    {
+        public override Type InterfaceType => typeof(IClientConnectionHolder);
+
+        public ClientConnectionHolderRef() : base(null)
+        {
+        }
+
+        public ClientConnectionHolderRef(IRequestTarget target) : base(target)
+        {
+        }
+
+        public ClientConnectionHolderRef(IRequestTarget target, IRequestWaiter requestWaiter, TimeSpan? timeout = null) : base(target, requestWaiter, timeout)
+        {
+        }
+
+        public IClientConnectionHolder_NoReply WithNoReply()
+        {
+            return this;
+        }
+
+        public ClientConnectionHolderRef WithRequestWaiter(IRequestWaiter requestWaiter)
+        {
+            return new ClientConnectionHolderRef(Target, requestWaiter, Timeout);
+        }
+
+        public ClientConnectionHolderRef WithTimeout(TimeSpan? timeout)
+        {
+            return new ClientConnectionHolderRef(Target, RequestWaiter, timeout);
+        }
+
+        public Task SendMessagePack(Domain.BehaviourMessages.JediumBehaviourMessage[] messages)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IClientConnectionHolder_PayloadTable.SendMessagePack_Invoke { messages = messages }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
+        public Task Stop()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IClientConnectionHolder_PayloadTable.Stop_Invoke {  }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
+        void IClientConnectionHolder_NoReply.SendMessagePack(Domain.BehaviourMessages.JediumBehaviourMessage[] messages)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IClientConnectionHolder_PayloadTable.SendMessagePack_Invoke { messages = messages }
+            };
+            SendRequest(requestMessage);
+        }
+
+        void IClientConnectionHolder_NoReply.Stop()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IClientConnectionHolder_PayloadTable.Stop_Invoke {  }
+            };
+            SendRequest(requestMessage);
+        }
+    }
+
+    [AlternativeInterface(typeof(IClientConnectionHolder))]
+    public interface IClientConnectionHolderSync : IInterfacedActorSync
+    {
+        void SendMessagePack(Domain.BehaviourMessages.JediumBehaviourMessage[] messages);
+        void Stop();
+    }
+}
+
+#endregion
 #region Domain.IConnection
 
 namespace Domain
@@ -309,7 +436,6 @@ namespace Domain
             return new Type[,] {
                 { typeof(AddLoadedScene_Invoke), null },
                 { typeof(DoLogin_Invoke), typeof(DoLogin_Return) },
-                { typeof(DoLogout_Invoke), null },
                 { typeof(NotifySceneLoaded_Invoke), null },
                 { typeof(RegisterClient_Invoke), typeof(RegisterClient_Return) },
                 { typeof(SpawnGameObject_Invoke), null },
@@ -366,23 +492,6 @@ namespace Domain
             public object Value
             {
                 get { return v; }
-            }
-        }
-
-        public class DoLogout_Invoke
-            : IInterfacedPayload, IAsyncInvokable
-        {
-            public System.Guid clientId;
-
-            public Type GetInterfaceType()
-            {
-                return typeof(IConnection);
-            }
-
-            public async Task<IValueGetable> InvokeAsync(object __target)
-            {
-                await ((IConnection)__target).DoLogout(clientId);
-                return null;
             }
         }
 
@@ -466,7 +575,6 @@ namespace Domain
             public System.Guid bundleId;
             public System.Guid avatarId;
             public Domain.IGameObject obj;
-            public string address;
 
             public Type GetInterfaceType()
             {
@@ -475,7 +583,7 @@ namespace Domain
 
             public async Task<IValueGetable> InvokeAsync(object __target)
             {
-                await ((IConnection)__target).SpawnGameObject(namePrefab, nameNotOwnedPrefab, localID, ownerId, bundleId, avatarId, obj, address);
+                await ((IConnection)__target).SpawnGameObject(namePrefab, nameNotOwnedPrefab, localID, ownerId, bundleId, avatarId, obj);
                 return null;
             }
         }
@@ -500,10 +608,9 @@ namespace Domain
     {
         void AddLoadedScene(System.Guid sceneId, Domain.ISceneActor scene);
         void DoLogin(string username, string password);
-        void DoLogout(System.Guid clientId);
         void NotifySceneLoaded(System.Guid clientId, System.Guid sceneId, string username);
         void RegisterClient(System.Guid clientId, System.Guid sceneId, Domain.IConnectionObserver client);
-        void SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj, string address);
+        void SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj);
         void TestConnection();
     }
 
@@ -554,14 +661,6 @@ namespace Domain
             return SendRequestAndReceive<System.Tuple<bool, string, Domain.ServerInfo>>(requestMessage);
         }
 
-        public Task DoLogout(System.Guid clientId)
-        {
-            var requestMessage = new RequestMessage {
-                InvokePayload = new IConnection_PayloadTable.DoLogout_Invoke { clientId = clientId }
-            };
-            return SendRequestAndWait(requestMessage);
-        }
-
         public Task NotifySceneLoaded(System.Guid clientId, System.Guid sceneId, string username)
         {
             var requestMessage = new RequestMessage {
@@ -578,10 +677,10 @@ namespace Domain
             return SendRequestAndReceive<Domain.ISceneActor>(requestMessage);
         }
 
-        public Task SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj, string address)
+        public Task SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj)
         {
             var requestMessage = new RequestMessage {
-                InvokePayload = new IConnection_PayloadTable.SpawnGameObject_Invoke { namePrefab = namePrefab, nameNotOwnedPrefab = nameNotOwnedPrefab, localID = localID, ownerId = ownerId, bundleId = bundleId, avatarId = avatarId, obj = obj, address = address }
+                InvokePayload = new IConnection_PayloadTable.SpawnGameObject_Invoke { namePrefab = namePrefab, nameNotOwnedPrefab = nameNotOwnedPrefab, localID = localID, ownerId = ownerId, bundleId = bundleId, avatarId = avatarId, obj = obj }
             };
             return SendRequestAndWait(requestMessage);
         }
@@ -626,14 +725,6 @@ namespace Domain
             SendRequest(requestMessage);
         }
 
-        void IConnection_NoReply.DoLogout(System.Guid clientId)
-        {
-            var requestMessage = new RequestMessage {
-                InvokePayload = new IConnection_PayloadTable.DoLogout_Invoke { clientId = clientId }
-            };
-            SendRequest(requestMessage);
-        }
-
         void IConnection_NoReply.NotifySceneLoaded(System.Guid clientId, System.Guid sceneId, string username)
         {
             var requestMessage = new RequestMessage {
@@ -650,10 +741,10 @@ namespace Domain
             SendRequest(requestMessage);
         }
 
-        void IConnection_NoReply.SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj, string address)
+        void IConnection_NoReply.SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj)
         {
             var requestMessage = new RequestMessage {
-                InvokePayload = new IConnection_PayloadTable.SpawnGameObject_Invoke { namePrefab = namePrefab, nameNotOwnedPrefab = nameNotOwnedPrefab, localID = localID, ownerId = ownerId, bundleId = bundleId, avatarId = avatarId, obj = obj, address = address }
+                InvokePayload = new IConnection_PayloadTable.SpawnGameObject_Invoke { namePrefab = namePrefab, nameNotOwnedPrefab = nameNotOwnedPrefab, localID = localID, ownerId = ownerId, bundleId = bundleId, avatarId = avatarId, obj = obj }
             };
             SendRequest(requestMessage);
         }
@@ -688,10 +779,9 @@ namespace Domain
     {
         void AddLoadedScene(System.Guid sceneId, Domain.ISceneActor scene);
         System.Tuple<bool, string, Domain.ServerInfo> DoLogin(string username, string password);
-        void DoLogout(System.Guid clientId);
         void NotifySceneLoaded(System.Guid clientId, System.Guid sceneId, string username);
         Domain.ISceneActor RegisterClient(System.Guid clientId, System.Guid sceneId, Domain.IConnectionObserver client);
-        void SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj, string address);
+        void SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localID, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, Domain.IGameObject obj);
         void TestConnection();
     }
 }
@@ -721,6 +811,7 @@ namespace Domain
                 { typeof(SendBehaviourMessagePackToServer_Invoke), null },
                 { typeof(SendBehaviourMessageToServer_Invoke), null },
                 { typeof(SetAvatarProps_Invoke), null },
+                { typeof(TickBehaviours_Invoke), null },
                 { typeof(UnregisterClient_Invoke), null },
             };
         }
@@ -1082,6 +1173,21 @@ namespace Domain
             }
         }
 
+        public class TickBehaviours_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public Type GetInterfaceType()
+            {
+                return typeof(IGameObject);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((IGameObject)__target).TickBehaviours();
+                return null;
+            }
+        }
+
         public class UnregisterClient_Invoke
             : IInterfacedPayload, IAsyncInvokable
         {
@@ -1116,6 +1222,7 @@ namespace Domain
         void SendBehaviourMessagePackToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage[] messages);
         void SendBehaviourMessageToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage message);
         void SetAvatarProps(string props);
+        void TickBehaviours();
         void UnregisterClient(System.Guid clientId);
     }
 
@@ -1262,6 +1369,14 @@ namespace Domain
             return SendRequestAndWait(requestMessage);
         }
 
+        public Task TickBehaviours()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IGameObject_PayloadTable.TickBehaviours_Invoke {  }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
         public Task UnregisterClient(System.Guid clientId)
         {
             var requestMessage = new RequestMessage {
@@ -1398,6 +1513,14 @@ namespace Domain
             SendRequest(requestMessage);
         }
 
+        void IGameObject_NoReply.TickBehaviours()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IGameObject_PayloadTable.TickBehaviours_Invoke {  }
+            };
+            SendRequest(requestMessage);
+        }
+
         void IGameObject_NoReply.UnregisterClient(System.Guid clientId)
         {
             var requestMessage = new RequestMessage {
@@ -1440,6 +1563,7 @@ namespace Domain
         void SendBehaviourMessagePackToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage[] messages);
         void SendBehaviourMessageToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage message);
         void SetAvatarProps(string props);
+        void TickBehaviours();
         void UnregisterClient(System.Guid clientId);
     }
 }
@@ -1894,6 +2018,7 @@ namespace Domain
         {
             return new Type[] {
                 typeof(ClientLoggedIn_Invoke),
+                typeof(KillOwnedObjects_Invoke),
                 typeof(OnSpawnedGameObject_Invoke),
             };
         }
@@ -1910,6 +2035,21 @@ namespace Domain
             public void Invoke(object __target)
             {
                 ((IConnectionObserver)__target).ClientLoggedIn(clientid);
+            }
+        }
+
+        public class KillOwnedObjects_Invoke : IInterfacedPayload, IInvokable
+        {
+            public System.Guid clientId;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(IConnectionObserver);
+            }
+
+            public void Invoke(object __target)
+            {
+                ((IConnectionObserver)__target).KillOwnedObjects(clientId);
             }
         }
 
@@ -1954,6 +2094,12 @@ namespace Domain
             Notify(payload);
         }
 
+        public void KillOwnedObjects(System.Guid clientId)
+        {
+            var payload = new IConnectionObserver_PayloadTable.KillOwnedObjects_Invoke { clientId = clientId };
+            Notify(payload);
+        }
+
         public void OnSpawnedGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localId, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, string address, Domain.ObjectSnapshot snap)
         {
             var payload = new IConnectionObserver_PayloadTable.OnSpawnedGameObject_Invoke { namePrefab = namePrefab, nameNotOwnedPrefab = nameNotOwnedPrefab, localId = localId, ownerId = ownerId, bundleId = bundleId, avatarId = avatarId, address = address, snap = snap };
@@ -1965,6 +2111,7 @@ namespace Domain
     public interface IConnectionObserverAsync : IInterfacedObserverSync
     {
         Task ClientLoggedIn(System.Guid clientid);
+        Task KillOwnedObjects(System.Guid clientId);
         Task OnSpawnedGameObject(string namePrefab, string nameNotOwnedPrefab, System.Guid localId, System.Guid ownerId, System.Guid bundleId, System.Guid avatarId, string address, Domain.ObjectSnapshot snap);
     }
 }
@@ -1981,6 +2128,7 @@ namespace Domain
         {
             return new Type[] {
                 typeof(DestroyObject_Invoke),
+                typeof(GotAddress_Invoke),
                 typeof(SendBehaviourMessagePackToClient_Invoke),
                 typeof(SendBehaviourMessageToClient_Invoke),
             };
@@ -1996,6 +2144,19 @@ namespace Domain
             public void Invoke(object __target)
             {
                 ((IGameObjectObserver)__target).DestroyObject();
+            }
+        }
+
+        public class GotAddress_Invoke : IInterfacedPayload, IInvokable
+        {
+            public Type GetInterfaceType()
+            {
+                return typeof(IGameObjectObserver);
+            }
+
+            public void Invoke(object __target)
+            {
+                ((IGameObjectObserver)__target).GotAddress();
             }
         }
 
@@ -2048,6 +2209,12 @@ namespace Domain
             Notify(payload);
         }
 
+        public void GotAddress()
+        {
+            var payload = new IGameObjectObserver_PayloadTable.GotAddress_Invoke {  };
+            Notify(payload);
+        }
+
         public void SendBehaviourMessagePackToClient(Domain.BehaviourMessages.JediumBehaviourMessage[] messages)
         {
             var payload = new IGameObjectObserver_PayloadTable.SendBehaviourMessagePackToClient_Invoke { messages = messages };
@@ -2065,6 +2232,7 @@ namespace Domain
     public interface IGameObjectObserverAsync : IInterfacedObserverSync
     {
         Task DestroyObject();
+        Task GotAddress();
         Task SendBehaviourMessagePackToClient(Domain.BehaviourMessages.JediumBehaviourMessage[] messages);
         Task SendBehaviourMessageToClient(Domain.BehaviourMessages.JediumBehaviourMessage message);
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Interfaced;
@@ -10,7 +11,7 @@ using DomainInternal;
 
 namespace Server2
 {
-    public class ServerConnection : AbstractActor, IConnection
+    public class ServerConnection : InterfacedActor, IConnection
     {
         private readonly ILog _logger;
 
@@ -19,24 +20,28 @@ namespace Server2
         private readonly Dictionary<Guid, IConnectionObserver> _clients;
 
 
-        private readonly IDatabaseAgent _database;
+        private readonly DatabaseAgentRef _database;
 
         private readonly Dictionary<Guid, ISceneActor> _loadedScenes;
 
-        private readonly Dictionary<Guid, IGameObject>
-            _spawnedObjects; //todo: move to.... or keep as objects per connection?
+      //  private readonly Dictionary<Guid, IGameObject>
+       //     _spawnedObjects; //todo: move to.... or keep as objects per connection?
+
+
+        private List<Guid> _loggedInUsers;
+
 
 
         #region ctrors
 
-        public ServerConnection(IDatabaseAgent database) : base(GenerateGuids.GetActorGuid(TYPEACTOR.CONNECTION),
-            GenerateGuids.GetActorGuid(TYPEACTOR.EMPTY))
+        public ServerConnection(DatabaseAgentRef database) 
         {
+            _loggedInUsers=new List<Guid>();
             _allClientObjects = new Dictionary<Guid, Tuple<Guid, IGameObject>>();
             _database = database;
             _logger = LogManager.GetLogger("[Connection]");
             _clients = new Dictionary<Guid, IConnectionObserver>();
-            _spawnedObjects = new Dictionary<Guid, IGameObject>();
+          //  _spawnedObjects = new Dictionary<Guid, IGameObject>();
             _loadedScenes = new Dictionary<Guid, ISceneActor>();
             _logger.Info("Server connection initialized");
         }
@@ -75,9 +80,10 @@ namespace Server2
 
         #region Implement interface IConnection 
 
-        async Task IConnection.TestConnection()
+         Task IConnection.TestConnection()
         {
             _logger.Warn("TEST CLIENT CONNECTION");
+            return Task.FromResult(true);
         }
 
 
@@ -91,16 +97,18 @@ namespace Server2
 
             if (user.Password != password)
                 return Tuple.Create<bool, string, ServerInfo>(false, $"Wrong password for user {username}", null);
-
+            if(_loggedInUsers.Contains(user.UserId))
+                return Tuple.Create<bool, string, ServerInfo>(false, $"User {username} already logged in", null);
 
             ServerInfo info = new ServerInfo();
             info.AdditionalRegisteredBehaviours = TYPEBEHAVIOUR.AdditionalBehaviours;
+            info._loggedInUserId = user.UserId;
 
-
+            _loggedInUsers.Add(user.UserId);
             return Tuple.Create(true, "TestServer", info);
         }
 
-        async Task<ISceneActor> IConnection.RegisterClient(Guid clientid, Guid sceneId, IConnectionObserver client)
+        Task<ISceneActor> IConnection.RegisterClient(Guid clientid, Guid sceneId, IConnectionObserver client)
         {
             _logger.Info("Registering client:" + clientid);
             _logger.Warn("SceneId:" + sceneId);
@@ -125,7 +133,7 @@ namespace Server2
             //TODO - track disconnected status
             //Context.Watch(Sender);
 
-            return _loadedScenes[sceneId];
+            return Task.FromResult(_loadedScenes[sceneId]);
         }
 
       
@@ -160,53 +168,64 @@ namespace Server2
 
         #region Сервер: уничтожение обьекта аватара, рассылка сообщения всем клиентам
 
-        //TODO - avatar bug
-        async Task IConnection.DoLogout(Guid clientId)
+    
+
+        [MessageHandler]
+        void HandleLogout(LogoutMessage msg)
         {
-            if (_clients.ContainsKey(clientId))
+            Console.WriteLine("___HANDLE LOGOUT");
+            if (_clients.ContainsKey(msg.ClientId))
             {
                 //TODO - send the scene here too
-                _clients.Remove(clientId);
+                    _clients.Remove(msg.ClientId);
 
 
-                foreach (var scene in _loadedScenes) await scene.Value.LogoutClient(clientId);
+                    foreach (var scene in _loadedScenes)
+                        scene.Value.LogoutClient(msg.ClientId).Wait();
 
                 List<Guid> otorem = new List<Guid>();
 
                 foreach (var oobj in _allClientObjects)
                 {
-                    oobj.Value.Item2.UnregisterClient(clientId).Wait();
-                    if (oobj.Value.Item1 == clientId) otorem.Add(oobj.Key);
+                        oobj.Value.Item2.UnregisterClient(msg.ClientId).Wait();
+                        if (oobj.Value.Item1 == msg.ClientId) otorem.Add(oobj.Key);
                 }
 
                 foreach (var rid in otorem)
                 {
-                    await _allClientObjects[rid].Item2.DestroyObject();
+                        _allClientObjects[rid].Item2.DestroyObject().Wait();
                     _allClientObjects.Remove(rid);
                 }
 
-                _logger.Info($"Client - {clientId} is removed");
+                    foreach (var client in _clients)
+                    {
+                        client.Value.KillOwnedObjects(msg.ClientId);
+                    }
+            
+                    _loggedInUsers.Remove(msg.UserId);
+                    _logger.Info($"Client - {msg.ClientId} is removed");
             }
             else
             {
-                _logger.Warn($"Not exists {clientId} client");
+                    _logger.Warn($"Not exists {msg.ClientId} client");
             }
         }
 
         #endregion
 
-        async Task IConnection.AddLoadedScene(Guid sceneId, ISceneActor scene)
+        Task IConnection.AddLoadedScene(Guid sceneId, ISceneActor scene)
         {
             _loadedScenes.Add(sceneId, scene);
+
+            return Task.FromResult(true);
         }
 
-        async Task IConnection.SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, Guid localID, Guid ownerId,
-            Guid bundleId, Guid avatarId, IGameObject obj,
-            string address)
+         Task IConnection.SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, Guid localID, Guid ownerId,
+            Guid bundleId, Guid avatarId, IGameObject obj)
         {
             _logger.Info("Spawning object:" + localID);
 
-            _spawnedObjects.Add(localID, obj);
+           // _spawnedObjects.Add(localID, obj);
 
             Console.WriteLine("LocalId: " + localID);
 
@@ -214,6 +233,8 @@ namespace Server2
                 cln.Value.OnSpawnedGameObject(namePrefab, nameNotOwnedPrefab, localID, obj.GetOwnerId().Result,
                     bundleId, obj.GetAvatarId().Result,
                     obj.GetServerAddress().Result, obj.GetSnapshot().Result);
+
+            return Task.FromResult(true);
         }
 
         #endregion

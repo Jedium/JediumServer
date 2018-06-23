@@ -8,7 +8,7 @@
 // ------------------------------------------------------------------------------
 
 using System;
-using Akka.Interfaced;
 using System.Threading.Tasks;
+using Akka.Interfaced;
 using Akka.Actor;
 

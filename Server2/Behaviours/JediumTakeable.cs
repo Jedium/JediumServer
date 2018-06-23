@@ -1,6 +1,5 @@
 ﻿using Domain;
 using Domain.BehaviourMessages;
-using Domain;
 using DomainInternal.Behaviours;
 using NLog;
 using System;

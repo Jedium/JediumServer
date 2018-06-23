@@ -1,18 +1,19 @@
 ﻿using System.Threading.Tasks;
+using Akka.Interfaced;
 using Domain;
 
 namespace Server2
 {
     //WIP
-    public partial class ServerGameObject : AbstractActor, IGameObject, IGameObjectSelfAccessor
+    public partial class ServerGameObject : InterfacedActor, IGameObject, IGameObjectSelfAccessor, IAbstractActor
     {
         public int MessageNum;
 
-        async Task<int> IGameObject.GetMessageCount()
+        Task<int> IGameObject.GetMessageCount()
         {
             int ret = MessageNum;
             MessageNum = 0;
-            return ret;
+            return Task.FromResult(ret);
         }
     }
 }

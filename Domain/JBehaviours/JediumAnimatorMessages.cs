@@ -2,8 +2,6 @@
 
 namespace Domain.BehaviourMessages
 {
-    //shoud be nullable
-    //and make it immutable
     public struct JediumAnimatorMessage : JediumBehaviourMessage
     {
         public readonly JEDIUM_TYPE_ANIMATOR Type;

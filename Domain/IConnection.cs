@@ -19,7 +19,6 @@ namespace Domain
 
 
         //логин 
-        //TODO добавить проверку логина-пароля, возвращать результат
         /// <summary>
         /// Authorizes the client on server.
         /// </summary>
@@ -36,7 +35,7 @@ namespace Domain
         /// </summary>
         /// <param name="clientId">Client GUID.</param>
         /// <returns></returns>
-        Task DoLogout(Guid clientId);
+      //  Task DoLogout(Guid clientId,Guid userId);
 
         //регистрация клиента на сервере. вызывать с клиента после проверки пароля
         /// <summary>
@@ -69,9 +68,15 @@ namespace Domain
         /// <param name="address"></param>
         /// <returns></returns>
         Task SpawnGameObject(string namePrefab, string nameNotOwnedPrefab, Guid localID, Guid ownerId, Guid bundleId,
-            Guid avatarId, IGameObject obj, string address);
+            Guid avatarId,IGameObject obj);
 
         Task AddLoadedScene(Guid sceneId, ISceneActor scene);
+    }
+
+    public class LogoutMessage
+    {
+        public Guid ClientId;
+        public Guid UserId;
     }
 
     /// <summary>
@@ -83,5 +88,7 @@ namespace Domain
         /// Behaviours from loaded plugins
         /// </summary>
         public Dictionary<int, string> AdditionalRegisteredBehaviours;
+
+        public Guid _loggedInUserId;
     }
 }

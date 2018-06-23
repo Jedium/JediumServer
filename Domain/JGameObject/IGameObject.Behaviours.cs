@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Akka.Interfaced;
 using Domain.BehaviourMessages;
 
 namespace Domain
@@ -11,6 +12,8 @@ namespace Domain
        //TODO - unused. Implement high prority messages
         Task SendBehaviourMessageToServer(Guid clientId, JediumBehaviourMessage message);
         Task SendBehaviourMessagePackToServer(Guid clientId, JediumBehaviourMessage[] messages);
+
+       [Reentrant] Task TickBehaviours();
 
         #endregion
     }

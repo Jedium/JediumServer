@@ -84,7 +84,6 @@ namespace DomainInternal
         }
     }
 
-    //TODO - this all should be mapped to Mongo
     public class DatabaseObject
     {
         public Guid BundleId;
