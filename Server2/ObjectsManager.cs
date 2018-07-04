@@ -14,7 +14,7 @@ namespace Server2
         private readonly ILog _logger;
         private readonly IConnection _conn;
         private readonly DatabaseAgentRef _database;
-        private Dictionary<Guid, ISceneActor> loadedScenes;
+        private Dictionary<Guid, SceneActorRef> loadedScenes;
 
         public ObjectsManager(DatabaseAgentRef database, IConnection conn) 
         {
@@ -36,7 +36,7 @@ namespace Server2
             var scenesInfo = await _database.GetScenes();
             _logger.Info("Total scenes loaded:" + scenesInfo.Count);
 
-            loadedScenes = new Dictionary<Guid, ISceneActor>();
+            loadedScenes = new Dictionary<Guid, SceneActorRef>();
 
             foreach (var scene in scenesInfo)
             {
@@ -63,12 +63,12 @@ namespace Server2
 
         #region Stats
 
-         Task<List<Tuple<Guid, string>>> IObjectsManager.GetLoadedScenesList()
+         Task<List<Tuple<Guid, string,string>>> IObjectsManager.GetLoadedScenesList()
         {
-            List<Tuple<Guid, string>> ret = new List<Tuple<Guid, string>>();
+            List<Tuple<Guid, string,string>> ret = new List<Tuple<Guid, string,string>>();
 
             foreach (var scene in loadedScenes)
-                ret.Add(new Tuple<Guid, string>(scene.Key, scene.Value.GetSceneName().Result));
+                ret.Add(new Tuple<Guid, string,string>(scene.Key, scene.Value.GetSceneName().Result,scene.Value.GetActorAddress().Result));
 
             return Task.FromResult(ret);
         }

@@ -28,7 +28,8 @@ namespace Domain
             {2,"Animation" },
             {3,"CharacterController" },
             {4, "Take" },
-            {5,"Sit" }
+            {5,"Sit" },
+            {6,"UI" }
         };
 
 

@@ -14,7 +14,8 @@ namespace Server2.Behaviours
            {"Animation", typeof(JediumAnimator)},
            {"CharacterController", typeof(JediumCharacterController)},
            {"Take", typeof(JediumTakeable) },
-           {"Sit", typeof(JediumSiteable) }
+           {"Sit", typeof(JediumSiteable) },
+           {"UI",typeof(JediumUI) }
        };
 
        public static List<Type> DBTypes = new List<Type>()
@@ -24,7 +25,8 @@ namespace Server2.Behaviours
            typeof(JediumTouchableDBSnapshot),
            typeof(JediumCharacterControllerDBSnapshot),
            typeof(JediumTakeableDBSnapshot),
-           typeof(JediumSiteableDBSnapshot)
+           typeof(JediumSiteableDBSnapshot),
+           typeof(JediumUIDBSnapshot)
        };
    }
 }

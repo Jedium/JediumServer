@@ -811,6 +811,7 @@ namespace Domain
                 { typeof(SendBehaviourMessagePackToServer_Invoke), null },
                 { typeof(SendBehaviourMessageToServer_Invoke), null },
                 { typeof(SetAvatarProps_Invoke), null },
+                { typeof(SetBehaviourSnapshot_Invoke), null },
                 { typeof(TickBehaviours_Invoke), null },
                 { typeof(UnregisterClient_Invoke), null },
             };
@@ -1173,6 +1174,23 @@ namespace Domain
             }
         }
 
+        public class SetBehaviourSnapshot_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public Domain.BehaviourMessages.JediumBehaviourSnapshot snapshot;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(IGameObject);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((IGameObject)__target).SetBehaviourSnapshot(snapshot);
+                return null;
+            }
+        }
+
         public class TickBehaviours_Invoke
             : IInterfacedPayload, IAsyncInvokable
         {
@@ -1222,6 +1240,7 @@ namespace Domain
         void SendBehaviourMessagePackToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage[] messages);
         void SendBehaviourMessageToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage message);
         void SetAvatarProps(string props);
+        void SetBehaviourSnapshot(Domain.BehaviourMessages.JediumBehaviourSnapshot snapshot);
         void TickBehaviours();
         void UnregisterClient(System.Guid clientId);
     }
@@ -1365,6 +1384,14 @@ namespace Domain
         {
             var requestMessage = new RequestMessage {
                 InvokePayload = new IGameObject_PayloadTable.SetAvatarProps_Invoke { props = props }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
+        public Task SetBehaviourSnapshot(Domain.BehaviourMessages.JediumBehaviourSnapshot snapshot)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IGameObject_PayloadTable.SetBehaviourSnapshot_Invoke { snapshot = snapshot }
             };
             return SendRequestAndWait(requestMessage);
         }
@@ -1513,6 +1540,14 @@ namespace Domain
             SendRequest(requestMessage);
         }
 
+        void IGameObject_NoReply.SetBehaviourSnapshot(Domain.BehaviourMessages.JediumBehaviourSnapshot snapshot)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IGameObject_PayloadTable.SetBehaviourSnapshot_Invoke { snapshot = snapshot }
+            };
+            SendRequest(requestMessage);
+        }
+
         void IGameObject_NoReply.TickBehaviours()
         {
             var requestMessage = new RequestMessage {
@@ -1563,6 +1598,7 @@ namespace Domain
         void SendBehaviourMessagePackToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage[] messages);
         void SendBehaviourMessageToServer(System.Guid clientId, Domain.BehaviourMessages.JediumBehaviourMessage message);
         void SetAvatarProps(string props);
+        void SetBehaviourSnapshot(Domain.BehaviourMessages.JediumBehaviourSnapshot snapshot);
         void TickBehaviours();
         void UnregisterClient(System.Guid clientId);
     }
@@ -1579,7 +1615,11 @@ namespace Domain
         public static Type[,] GetPayloadTypes()
         {
             return new Type[,] {
+                { typeof(AddSceneObject_Invoke), null },
+                { typeof(DeleteSceneObject_Invoke), null },
+                { typeof(GetActorAddress_Invoke), typeof(GetActorAddress_Return) },
                 { typeof(GetBundleId_Invoke), typeof(GetBundleId_Return) },
+                { typeof(GetObjectInfo_Invoke), typeof(GetObjectInfo_Return) },
                 { typeof(GetSceneName_Invoke), typeof(GetSceneName_Return) },
                 { typeof(GetSceneObjects_Invoke), typeof(GetSceneObjects_Return) },
                 { typeof(GetServerName_Invoke), typeof(GetServerName_Return) },
@@ -1587,7 +1627,76 @@ namespace Domain
                 { typeof(LogoutClient_Invoke), null },
                 { typeof(PushObjectsToClient_Invoke), null },
                 { typeof(SaveObjectsToDB_Invoke), null },
+                { typeof(SetObjectBehaviour_Invoke), null },
+                { typeof(TestConnection_Invoke), null },
             };
+        }
+
+        public class AddSceneObject_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public System.Guid localId;
+            public System.Guid prefabId;
+            public System.Collections.Generic.List<Domain.BehaviourMessages.JediumBehaviourSnapshot> snapshots;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((ISceneActor)__target).AddSceneObject(localId, prefabId, snapshots);
+                return null;
+            }
+        }
+
+        public class DeleteSceneObject_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public System.Guid localId;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((ISceneActor)__target).DeleteSceneObject(localId);
+                return null;
+            }
+        }
+
+        public class GetActorAddress_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                var __v = await ((ISceneActor)__target).GetActorAddress();
+                return (IValueGetable)(new GetActorAddress_Return { v = __v });
+            }
+        }
+
+        public class GetActorAddress_Return
+            : IInterfacedPayload, IValueGetable
+        {
+            public string v;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public object Value
+            {
+                get { return v; }
+            }
         }
 
         public class GetBundleId_Invoke
@@ -1609,6 +1718,39 @@ namespace Domain
             : IInterfacedPayload, IValueGetable
         {
             public System.Guid v;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public object Value
+            {
+                get { return v; }
+            }
+        }
+
+        public class GetObjectInfo_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public System.Guid localId;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                var __v = await ((ISceneActor)__target).GetObjectInfo(localId);
+                return (IValueGetable)(new GetObjectInfo_Return { v = __v });
+            }
+        }
+
+        public class GetObjectInfo_Return
+            : IInterfacedPayload, IValueGetable
+        {
+            public System.Tuple<System.Guid, Domain.ObjectSnapshot> v;
 
             public Type GetInterfaceType()
             {
@@ -1786,11 +1928,48 @@ namespace Domain
                 return null;
             }
         }
+
+        public class SetObjectBehaviour_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public System.Guid localId;
+            public Domain.BehaviourMessages.JediumBehaviourSnapshot snap;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((ISceneActor)__target).SetObjectBehaviour(localId, snap);
+                return null;
+            }
+        }
+
+        public class TestConnection_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public Type GetInterfaceType()
+            {
+                return typeof(ISceneActor);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((ISceneActor)__target).TestConnection();
+                return null;
+            }
+        }
     }
 
-    public interface ISceneActor_NoReply : IAbstractActor_NoReply
+    public interface ISceneActor_NoReply
     {
+        void AddSceneObject(System.Guid localId, System.Guid prefabId, System.Collections.Generic.List<Domain.BehaviourMessages.JediumBehaviourSnapshot> snapshots);
+        void DeleteSceneObject(System.Guid localId);
+        void GetActorAddress();
         void GetBundleId();
+        void GetObjectInfo(System.Guid localId);
         void GetSceneName();
         void GetSceneObjects();
         void GetServerName();
@@ -1798,6 +1977,8 @@ namespace Domain
         void LogoutClient(System.Guid clientId);
         void PushObjectsToClient(System.Guid clientId, Domain.IConnectionObserver client);
         void SaveObjectsToDB();
+        void SetObjectBehaviour(System.Guid localId, Domain.BehaviourMessages.JediumBehaviourSnapshot snap);
+        void TestConnection();
     }
 
     public class SceneActorRef : InterfacedActorRef, ISceneActor, ISceneActor_NoReply
@@ -1831,12 +2012,44 @@ namespace Domain
             return new SceneActorRef(Target, RequestWaiter, timeout);
         }
 
+        public Task AddSceneObject(System.Guid localId, System.Guid prefabId, System.Collections.Generic.List<Domain.BehaviourMessages.JediumBehaviourSnapshot> snapshots)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.AddSceneObject_Invoke { localId = localId, prefabId = prefabId, snapshots = snapshots }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
+        public Task DeleteSceneObject(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.DeleteSceneObject_Invoke { localId = localId }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
+        public Task<string> GetActorAddress()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.GetActorAddress_Invoke {  }
+            };
+            return SendRequestAndReceive<string>(requestMessage);
+        }
+
         public Task<System.Guid> GetBundleId()
         {
             var requestMessage = new RequestMessage {
                 InvokePayload = new ISceneActor_PayloadTable.GetBundleId_Invoke {  }
             };
             return SendRequestAndReceive<System.Guid>(requestMessage);
+        }
+
+        public Task<System.Tuple<System.Guid, Domain.ObjectSnapshot>> GetObjectInfo(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.GetObjectInfo_Invoke { localId = localId }
+            };
+            return SendRequestAndReceive<System.Tuple<System.Guid, Domain.ObjectSnapshot>>(requestMessage);
         }
 
         public Task<string> GetSceneName()
@@ -1895,26 +2108,58 @@ namespace Domain
             return SendRequestAndWait(requestMessage);
         }
 
-        public Task<System.Guid> GetGuid()
+        public Task SetObjectBehaviour(System.Guid localId, Domain.BehaviourMessages.JediumBehaviourSnapshot snap)
         {
             var requestMessage = new RequestMessage {
-                InvokePayload = new IAbstractActor_PayloadTable.GetGuid_Invoke {  }
+                InvokePayload = new ISceneActor_PayloadTable.SetObjectBehaviour_Invoke { localId = localId, snap = snap }
             };
-            return SendRequestAndReceive<System.Guid>(requestMessage);
+            return SendRequestAndWait(requestMessage);
         }
 
-        public Task<System.Guid> GetOwnerId()
+        public Task TestConnection()
         {
             var requestMessage = new RequestMessage {
-                InvokePayload = new IAbstractActor_PayloadTable.GetOwnerId_Invoke {  }
+                InvokePayload = new ISceneActor_PayloadTable.TestConnection_Invoke {  }
             };
-            return SendRequestAndReceive<System.Guid>(requestMessage);
+            return SendRequestAndWait(requestMessage);
+        }
+
+        void ISceneActor_NoReply.AddSceneObject(System.Guid localId, System.Guid prefabId, System.Collections.Generic.List<Domain.BehaviourMessages.JediumBehaviourSnapshot> snapshots)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.AddSceneObject_Invoke { localId = localId, prefabId = prefabId, snapshots = snapshots }
+            };
+            SendRequest(requestMessage);
+        }
+
+        void ISceneActor_NoReply.DeleteSceneObject(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.DeleteSceneObject_Invoke { localId = localId }
+            };
+            SendRequest(requestMessage);
+        }
+
+        void ISceneActor_NoReply.GetActorAddress()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.GetActorAddress_Invoke {  }
+            };
+            SendRequest(requestMessage);
         }
 
         void ISceneActor_NoReply.GetBundleId()
         {
             var requestMessage = new RequestMessage {
                 InvokePayload = new ISceneActor_PayloadTable.GetBundleId_Invoke {  }
+            };
+            SendRequest(requestMessage);
+        }
+
+        void ISceneActor_NoReply.GetObjectInfo(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new ISceneActor_PayloadTable.GetObjectInfo_Invoke { localId = localId }
             };
             SendRequest(requestMessage);
         }
@@ -1975,27 +2220,31 @@ namespace Domain
             SendRequest(requestMessage);
         }
 
-        void IAbstractActor_NoReply.GetGuid()
+        void ISceneActor_NoReply.SetObjectBehaviour(System.Guid localId, Domain.BehaviourMessages.JediumBehaviourSnapshot snap)
         {
             var requestMessage = new RequestMessage {
-                InvokePayload = new IAbstractActor_PayloadTable.GetGuid_Invoke {  }
+                InvokePayload = new ISceneActor_PayloadTable.SetObjectBehaviour_Invoke { localId = localId, snap = snap }
             };
             SendRequest(requestMessage);
         }
 
-        void IAbstractActor_NoReply.GetOwnerId()
+        void ISceneActor_NoReply.TestConnection()
         {
             var requestMessage = new RequestMessage {
-                InvokePayload = new IAbstractActor_PayloadTable.GetOwnerId_Invoke {  }
+                InvokePayload = new ISceneActor_PayloadTable.TestConnection_Invoke {  }
             };
             SendRequest(requestMessage);
         }
     }
 
     [AlternativeInterface(typeof(ISceneActor))]
-    public interface ISceneActorSync : IAbstractActorSync
+    public interface ISceneActorSync : IInterfacedActorSync
     {
+        void AddSceneObject(System.Guid localId, System.Guid prefabId, System.Collections.Generic.List<Domain.BehaviourMessages.JediumBehaviourSnapshot> snapshots);
+        void DeleteSceneObject(System.Guid localId);
+        string GetActorAddress();
         System.Guid GetBundleId();
+        System.Tuple<System.Guid, Domain.ObjectSnapshot> GetObjectInfo(System.Guid localId);
         string GetSceneName();
         System.Collections.Generic.List<System.Tuple<System.Guid, string>> GetSceneObjects();
         string GetServerName();
@@ -2003,6 +2252,8 @@ namespace Domain
         void LogoutClient(System.Guid clientId);
         void PushObjectsToClient(System.Guid clientId, Domain.IConnectionObserver client);
         void SaveObjectsToDB();
+        void SetObjectBehaviour(System.Guid localId, Domain.BehaviourMessages.JediumBehaviourSnapshot snap);
+        void TestConnection();
     }
 }
 

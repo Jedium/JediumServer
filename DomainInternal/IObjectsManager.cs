@@ -10,7 +10,7 @@ namespace DomainInternal
         Task LoadObjects();
         Task LoadAllScenes();
 
-        Task<List<Tuple<Guid, string>>> GetLoadedScenesList();
+        Task<List<Tuple<Guid, string,string>>> GetLoadedScenesList();
 
         Task<List<Tuple<Guid, string>>> GetSceneObjects(Guid scene);
 

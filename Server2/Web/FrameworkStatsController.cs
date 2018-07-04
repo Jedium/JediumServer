@@ -27,7 +27,7 @@ namespace Server2.Web
         }
 
         [HttpGet]
-        public List<Tuple<Guid, string>> LoadedScenes()
+        public List<Tuple<Guid, string,string>> LoadedScenes()
         {
             return _manager.GetLoadedScenesList().Result;
         }

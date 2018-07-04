@@ -8,6 +8,7 @@ namespace Server2.Behaviours
 {
     public class JediumTouchable : JediumBehaviour
     {
+        
         private readonly ILogger _log;
 
         public JediumTouchable(JediumGameObject parent) : base(parent)

@@ -24,16 +24,20 @@ namespace DomainInternal
         #region Behaviour
         Task StoreDBBehaviour(JediumBehaviourDBSnapshot snap);
         Task<Dictionary<string, JediumBehaviourDBSnapshot>> GetObjectBehaviours(Guid localId);
+        Task DeleteObjectBehaviours(Guid localId);
         #endregion
 
         #region ServerObject
         Task<DatabaseObject> GetObjectServer(Guid objectId);
         Task CreateObjectServer(DatabaseObject dobject);
+        Task<List<DatabaseObject>> GetAllServerObjects();
         #endregion
 
         #region SceneObject
         Task<List<DatabaseSceneObject>> GetObjectsScene(Guid sceneId);
         Task AddSceneObject(DatabaseSceneObject sceneObj);
+
+        Task DeleteSceneObject(Guid localId);
         #endregion
 
         #region Scene
@@ -79,7 +83,7 @@ namespace DomainInternal
                 $"\n****************\n" +
                 $"LocalID - {LocalId},\n" +
                 $"ObjectID - {ObjectId},\n" +
-                $"ScenceID - {ObjectId},\n" +
+                $"ScenceID - {SceneId},\n" +
                 $"****************\n";
         }
     }
@@ -118,10 +122,19 @@ namespace DomainInternal
         public string BundleFile { get; set; }
         public string Hash { get; set; }
 
+        public AssetBundleType BundleType { get; set; }
+
         public override string ToString()
         {
             return $"BundleId: {BundleId}, file: {BundleFile}";
         }
+    }
+
+    public enum AssetBundleType
+    {
+        Unity=1,
+        JediumObject=2,
+        JediumUI = 3
     }
 
     public class DatabaseUser

@@ -1,11 +1,16 @@
 ﻿using System;
+using ProtoBuf;
 
 namespace Domain.BehaviourMessages
 {
+    
     public struct JediumTransformMessage : JediumBehaviourMessage
     {
+      
         public readonly float X;
+        
         public readonly float Y;
+      
         public readonly float Z;
         public readonly float RotX;
         public readonly float RotY;
@@ -55,7 +60,7 @@ namespace Domain.BehaviourMessages
 
         public float ScaleZ;
 
-        //TODO - pack it
+      
         public float X;
         public float Y;
         public float Z;

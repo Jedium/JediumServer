@@ -15,6 +15,8 @@ namespace Domain
 
        [Reentrant] Task TickBehaviours();
 
+        Task SetBehaviourSnapshot(JediumBehaviourSnapshot snapshot);
+
         #endregion
     }
 }

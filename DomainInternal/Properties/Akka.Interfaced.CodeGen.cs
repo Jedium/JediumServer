@@ -170,7 +170,10 @@ namespace DomainInternal
                 { typeof(CreateObjectServer_Invoke), null },
                 { typeof(CreateScene_Invoke), null },
                 { typeof(CreateUser_Invoke), null },
+                { typeof(DeleteObjectBehaviours_Invoke), null },
+                { typeof(DeleteSceneObject_Invoke), null },
                 { typeof(GetAllBundles_Invoke), typeof(GetAllBundles_Return) },
+                { typeof(GetAllServerObjects_Invoke), typeof(GetAllServerObjects_Return) },
                 { typeof(GetAssetBundle_Invoke), typeof(GetAssetBundle_Return) },
                 { typeof(GetAvatar_Invoke), typeof(GetAvatar_Return) },
                 { typeof(GetObjectBehaviours_Invoke), typeof(GetObjectBehaviours_Return) },
@@ -271,6 +274,40 @@ namespace DomainInternal
             }
         }
 
+        public class DeleteObjectBehaviours_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public System.Guid localId;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(IDatabaseAgent);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((IDatabaseAgent)__target).DeleteObjectBehaviours(localId);
+                return null;
+            }
+        }
+
+        public class DeleteSceneObject_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public System.Guid localId;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(IDatabaseAgent);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                await ((IDatabaseAgent)__target).DeleteSceneObject(localId);
+                return null;
+            }
+        }
+
         public class GetAllBundles_Invoke
             : IInterfacedPayload, IAsyncInvokable
         {
@@ -290,6 +327,37 @@ namespace DomainInternal
             : IInterfacedPayload, IValueGetable
         {
             public System.Collections.Generic.List<DomainInternal.DatabaseAssetBundle> v;
+
+            public Type GetInterfaceType()
+            {
+                return typeof(IDatabaseAgent);
+            }
+
+            public object Value
+            {
+                get { return v; }
+            }
+        }
+
+        public class GetAllServerObjects_Invoke
+            : IInterfacedPayload, IAsyncInvokable
+        {
+            public Type GetInterfaceType()
+            {
+                return typeof(IDatabaseAgent);
+            }
+
+            public async Task<IValueGetable> InvokeAsync(object __target)
+            {
+                var __v = await ((IDatabaseAgent)__target).GetAllServerObjects();
+                return (IValueGetable)(new GetAllServerObjects_Return { v = __v });
+            }
+        }
+
+        public class GetAllServerObjects_Return
+            : IInterfacedPayload, IValueGetable
+        {
+            public System.Collections.Generic.List<DomainInternal.DatabaseObject> v;
 
             public Type GetInterfaceType()
             {
@@ -637,7 +705,10 @@ namespace DomainInternal
         void CreateObjectServer(DomainInternal.DatabaseObject dobject);
         void CreateScene(DomainInternal.DatabaseScene scene);
         void CreateUser(DomainInternal.DatabaseUser user);
+        void DeleteObjectBehaviours(System.Guid localId);
+        void DeleteSceneObject(System.Guid localId);
         void GetAllBundles();
+        void GetAllServerObjects();
         void GetAssetBundle(System.Guid bundleId);
         void GetAvatar(System.Guid avatarId);
         void GetObjectBehaviours(System.Guid localId);
@@ -723,12 +794,36 @@ namespace DomainInternal
             return SendRequestAndWait(requestMessage);
         }
 
+        public Task DeleteObjectBehaviours(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IDatabaseAgent_PayloadTable.DeleteObjectBehaviours_Invoke { localId = localId }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
+        public Task DeleteSceneObject(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IDatabaseAgent_PayloadTable.DeleteSceneObject_Invoke { localId = localId }
+            };
+            return SendRequestAndWait(requestMessage);
+        }
+
         public Task<System.Collections.Generic.List<DomainInternal.DatabaseAssetBundle>> GetAllBundles()
         {
             var requestMessage = new RequestMessage {
                 InvokePayload = new IDatabaseAgent_PayloadTable.GetAllBundles_Invoke {  }
             };
             return SendRequestAndReceive<System.Collections.Generic.List<DomainInternal.DatabaseAssetBundle>>(requestMessage);
+        }
+
+        public Task<System.Collections.Generic.List<DomainInternal.DatabaseObject>> GetAllServerObjects()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IDatabaseAgent_PayloadTable.GetAllServerObjects_Invoke {  }
+            };
+            return SendRequestAndReceive<System.Collections.Generic.List<DomainInternal.DatabaseObject>>(requestMessage);
         }
 
         public Task<DomainInternal.DatabaseAssetBundle> GetAssetBundle(System.Guid bundleId)
@@ -867,10 +962,34 @@ namespace DomainInternal
             SendRequest(requestMessage);
         }
 
+        void IDatabaseAgent_NoReply.DeleteObjectBehaviours(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IDatabaseAgent_PayloadTable.DeleteObjectBehaviours_Invoke { localId = localId }
+            };
+            SendRequest(requestMessage);
+        }
+
+        void IDatabaseAgent_NoReply.DeleteSceneObject(System.Guid localId)
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IDatabaseAgent_PayloadTable.DeleteSceneObject_Invoke { localId = localId }
+            };
+            SendRequest(requestMessage);
+        }
+
         void IDatabaseAgent_NoReply.GetAllBundles()
         {
             var requestMessage = new RequestMessage {
                 InvokePayload = new IDatabaseAgent_PayloadTable.GetAllBundles_Invoke {  }
+            };
+            SendRequest(requestMessage);
+        }
+
+        void IDatabaseAgent_NoReply.GetAllServerObjects()
+        {
+            var requestMessage = new RequestMessage {
+                InvokePayload = new IDatabaseAgent_PayloadTable.GetAllServerObjects_Invoke {  }
             };
             SendRequest(requestMessage);
         }
@@ -980,7 +1099,10 @@ namespace DomainInternal
         void CreateObjectServer(DomainInternal.DatabaseObject dobject);
         void CreateScene(DomainInternal.DatabaseScene scene);
         void CreateUser(DomainInternal.DatabaseUser user);
+        void DeleteObjectBehaviours(System.Guid localId);
+        void DeleteSceneObject(System.Guid localId);
         System.Collections.Generic.List<DomainInternal.DatabaseAssetBundle> GetAllBundles();
+        System.Collections.Generic.List<DomainInternal.DatabaseObject> GetAllServerObjects();
         DomainInternal.DatabaseAssetBundle GetAssetBundle(System.Guid bundleId);
         DomainInternal.DatabaseAvatar GetAvatar(System.Guid avatarId);
         System.Collections.Generic.Dictionary<string, DomainInternal.Behaviours.JediumBehaviourDBSnapshot> GetObjectBehaviours(System.Guid localId);
@@ -1033,7 +1155,7 @@ namespace DomainInternal
         public class GetLoadedScenesList_Return
             : IInterfacedPayload, IValueGetable
         {
-            public System.Collections.Generic.List<System.Tuple<System.Guid, string>> v;
+            public System.Collections.Generic.List<System.Tuple<System.Guid, string, string>> v;
 
             public Type GetInterfaceType()
             {
@@ -1165,12 +1287,12 @@ namespace DomainInternal
             return new ObjectsManagerRef(Target, RequestWaiter, timeout);
         }
 
-        public Task<System.Collections.Generic.List<System.Tuple<System.Guid, string>>> GetLoadedScenesList()
+        public Task<System.Collections.Generic.List<System.Tuple<System.Guid, string, string>>> GetLoadedScenesList()
         {
             var requestMessage = new RequestMessage {
                 InvokePayload = new IObjectsManager_PayloadTable.GetLoadedScenesList_Invoke {  }
             };
-            return SendRequestAndReceive<System.Collections.Generic.List<System.Tuple<System.Guid, string>>>(requestMessage);
+            return SendRequestAndReceive<System.Collections.Generic.List<System.Tuple<System.Guid, string, string>>>(requestMessage);
         }
 
         public Task<System.Collections.Generic.List<System.Tuple<System.Guid, string>>> GetSceneObjects(System.Guid scene)
@@ -1249,7 +1371,7 @@ namespace DomainInternal
     [AlternativeInterface(typeof(IObjectsManager))]
     public interface IObjectsManagerSync : IInterfacedActorSync
     {
-        System.Collections.Generic.List<System.Tuple<System.Guid, string>> GetLoadedScenesList();
+        System.Collections.Generic.List<System.Tuple<System.Guid, string, string>> GetLoadedScenesList();
         System.Collections.Generic.List<System.Tuple<System.Guid, string>> GetSceneObjects(System.Guid scene);
         void LoadAllScenes();
         void LoadObjects();

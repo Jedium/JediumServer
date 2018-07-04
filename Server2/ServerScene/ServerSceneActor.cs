@@ -4,14 +4,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Interfaced;
+using Akka.Remote;
+using Akka.Util.Internal;
 using Common.Logging;
 using Domain;
+using Domain.BehaviourMessages;
 using DomainInternal;
 
 namespace Server2
 {
    
-    class ServerSceneActor :InterfacedActor, ISceneActor,IAbstractActor
+    class ServerSceneActor :InterfacedActor, ISceneActor//,IAbstractActor
     {
         private readonly ILog _logger;
         private readonly Guid _bundleId;
@@ -40,6 +43,46 @@ namespace Server2
 
         }
 
+        Task ISceneActor.TestConnection()
+        {
+            Console.WriteLine("___CONNECTED");
+            return Task.FromResult(true);
+        }
+
+        Task<string> ISceneActor.GetActorAddress()
+        {
+            return Task.FromResult(GetRemoteAddress());
+        }
+
+        protected string GetRemoteAddress()
+        {
+            Address addr = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider
+                .AsInstanceOf<RemoteActorRefProvider>().DefaultAddress;
+
+            return Self.Path.ToStringWithAddress(addr);
+        }
+
+        
+
+        async Task<Tuple<Guid,ObjectSnapshot>> ISceneActor.GetObjectInfo(Guid localId)
+        {
+            if (!sceneObjects.ContainsKey(localId))
+                return null;
+
+            return Tuple.Create(sceneObjects[localId].Item2.GetBundleId().Result,sceneObjects[localId].Item2.GetSnapshot().Result);
+        }
+
+        public Task SetObjectBehaviour(Guid localId, JediumBehaviourSnapshot snap)
+        {
+            if (!sceneObjects.ContainsKey(localId))
+            {
+                _logger.Warn($"Object {localId} not found while trying to set behaviour");
+                return Task.FromResult(false);
+            }
+
+            return sceneObjects[localId].Item2.SetBehaviourSnapshot(snap);
+
+        }
     
 
         Task<string> ISceneActor.GetServerName()
@@ -60,10 +103,57 @@ namespace Server2
         }
 
 
+        Task ISceneActor.AddSceneObject(Guid localId, Guid prefabId, List<JediumBehaviourSnapshot> snapshots)
+        {
+            DatabaseObject dbObj = _database.GetObjectServer(prefabId).Result;
+
+            IGameObject sceneAgent = Context
+                .ActorOf(
+                    Props.Create(() =>
+                        new ServerGameObject(_conn, _database, dbObj.Prefab,
+                            dbObj.Prefab, localId, Guid.Empty, dbObj.BundleId, Guid.Empty, Guid.Empty, "", null,
+                            null)),
+                    localId.ToString())
+                .Cast<GameObjectRef>();
+
+
+            sceneObjects.Add(localId, Tuple.Create(dbObj, sceneAgent));
+
+            _database.AddSceneObject(new DatabaseSceneObject()
+            {
+                LocalId = localId,
+                ObjectId = prefabId,
+                SceneId = _localId
+            }).Wait();
+
+            return Task.FromResult(true);
+        }
+
+        Task ISceneActor.DeleteSceneObject(Guid localId)
+        {
+            if (!sceneObjects.ContainsKey(localId))
+            {
+                _logger.Warn($"Object {localId} not found, can't delete");
+                return Task.FromResult(true);
+            }
+
+            sceneObjects[localId].Item2.DestroyObject().Wait();
+            sceneObjects.Remove(localId);
+
+            _database.DeleteSceneObject(localId).Wait();
+            _database.DeleteObjectBehaviours(localId).Wait();
+            return Task.FromResult(true);
+        }
+
         //possible
         async Task ISceneActor.LoadSceneObjects()
         {
               var objects = await _database.GetObjectsScene(_localId);
+
+            foreach (var obj in objects)
+            {
+                Console.WriteLine("___OBJECT:"+obj.LocalId);
+            }
 
 
             sceneObjects = new Dictionary<Guid, Tuple<DatabaseObject, IGameObject>>();
@@ -91,6 +181,8 @@ namespace Server2
 
             _logger.Info("is online");
         }
+
+        
 
         #region Комната: вызов спавна каждого обьекта через IConnectionObserver
 
@@ -139,14 +231,14 @@ namespace Server2
             foreach (var obj in sceneObjects) await obj.Value.Item2.SaveToDB();
         }
 
-        Task<Guid> IAbstractActor.GetGuid()
-        {
-            return Task.FromResult(_localId);
-        }
-
-        Task<Guid> IAbstractActor.GetOwnerId()
-        {
-            return Task.FromResult(_ownerId);
-        }
+     // Task<Guid> IAbstractActor.GetGuid()
+     // {
+     //     return Task.FromResult(_localId);
+     // }
+     //
+     // Task<Guid> IAbstractActor.GetOwnerId()
+     // {
+     //     return Task.FromResult(_ownerId);
+     // }
     }
 }

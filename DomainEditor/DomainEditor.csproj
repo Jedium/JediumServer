@@ -5,11 +5,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{754A7F20-D6F7-4BD0-A591-E55A97DCCB01}</ProjectGuid>
+    <ProjectGuid>{6991CFF7-7376-4181-AF64-3A7277901858}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Domain</RootNamespace>
-    <AssemblyName>Domain</AssemblyName>
+    <RootNamespace>DomainEditor</RootNamespace>
+    <AssemblyName>DomainEditor</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <NuGetPackageImportStamp>
@@ -45,18 +45,12 @@
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="protobuf-net, Version=2.1.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
-      <HintPath>..\packages\protobuf-net.2.1.0\lib\net451\protobuf-net.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -65,32 +59,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HideInEditor.cs" />
-    <Compile Include="IClientConnectionHolder.cs" />
-    <Compile Include="JBehaviours\JediumBehaviourMessages.cs" />
-    <Compile Include="JBehaviours\JediumCharacterControllerMessages.cs" />
-    <Compile Include="JBehaviours\JediumSitMessage.cs" />
-    <Compile Include="JBehaviours\JediumTakeMessage.cs" />
-    <Compile Include="JBehaviours\JediumTouchableMessages.cs" />
-    <Compile Include="JBehaviours\JediumTransform.cs" />
-    <Compile Include="GlobalEnum.cs" />
-    <Compile Include="IClientConnection.cs" />
-    <Compile Include="IConnection.cs" />
-    <Compile Include="IConnectionObserver.cs" />
-    <Compile Include="IAbstractActor.cs" />
-    <Compile Include="JBehaviours\JediumUIMessage.cs" />
-    <Compile Include="JGameObject\IGameObject.cs" />
-    <Compile Include="JGameObject\IGameObjectObserver.cs" />
-    <Compile Include="ISceneActor.cs" />
-    <Compile Include="JBehaviours\JediumAnimatorMessages.cs" />
+    <Compile Include="IEditorConnection.cs" />
     <Compile Include="Properties\Akka.Interfaced.CodeGen.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <Compile Include="JGameObject\IGameObjectObserver.Behaviours.cs" />
-    <Compile Include="JGameObject\IGameObject.Behaviours.cs" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\Domain.csproj">
+      <Project>{754a7f20-d6f7-4bd0-a591-e55a97dccb01}</Project>
+      <Name>Domain</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

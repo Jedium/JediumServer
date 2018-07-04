@@ -8,12 +8,14 @@ using Akka.Configuration.Hocon;
 using Akka.Interfaced;
 using Common.Logging;
 using Domain;
+using DomainEditor;
 using DomainInternal;
 using IniParser;
 using IniParser.Model;
 using Server2.Behaviours;
 using Server2.Connection;
 using Server2.database;
+using Server2.Editor;
 using Server2.Plugins;
 using Server2.Web;
 using TopShelf.Owin;
@@ -26,7 +28,7 @@ namespace Server2
         private DatabaseAgentRef _databaseAgent;
 
         private ILog _logger;
-        private IObjectsManager _manager;
+        private ObjectsManagerRef _manager;
 
         private IPluginsHost _pluginsHost;
         private IConnection _serverConnection;
@@ -36,6 +38,8 @@ namespace Server2
 
 
         private IWebApiHost _webApiHost;
+
+        private IEditorConnection _editorConnection;
 
         public bool Start()
         {
@@ -61,6 +65,12 @@ namespace Server2
             byte[] dbytes = File.ReadAllBytes("Domain.dll");
             MainSettings.ServerHash = mcalc.ComputeHash(dbytes).ToHex(false);
             _logger.Info($"Server domain hash: {MainSettings.ServerHash}");
+
+
+            //preload domain
+            var type = typeof(ISceneActor);
+            if (type == null)
+                throw new InvalidProgramException("!");
 
             //load plugins
            // BehaviourManager.LoadBehaviours(MainSettings.BehavioursPluginPath);
@@ -107,6 +117,12 @@ namespace Server2
             _manager = _system
                 .ActorOf(Props.Create(() => new ObjectsManager(_databaseAgent, _serverConnection)), "ObjectManager")
                 .Cast<ObjectsManagerRef>();
+
+
+            //Editor
+
+            _editorConnection = _system.ActorOf(Props.Create(() => new EditorConnection(_manager,_databaseAgent)), "EditorConnection")
+                .Cast<EditorConnectionRef>();
 
             //assets host
             _webApiHost = _system

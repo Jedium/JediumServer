@@ -66,7 +66,12 @@ namespace Server2
         {
             PostStop();
             List<JediumBehaviourDBSnapshot> snaps = _gameObject.GetDbSnapshots();
-            foreach (var s in snaps) _database.StoreDBBehaviour(s).Wait();
+            foreach (var s in snaps)
+            {
+                _log.Info($"Saving to DB: {s.LocalId}, {s.Type}");
+                _database.StoreDBBehaviour(s).Wait();
+            }
+
             return Task.FromResult(true);
         }
 
@@ -105,7 +110,7 @@ namespace Server2
 
 
            
-            Dictionary<string, JediumBehaviourDBSnapshot> dbsnaps = _database.GetObjectBehaviours(_localID).Result;
+            Dictionary<string, JediumBehaviourDBSnapshot> dbsnaps = _database.GetObjectBehaviours(_localId).Result;
 
             //and for avatar
             if (avatarId != Guid.Empty)
@@ -120,7 +125,7 @@ namespace Server2
                 _userId = userId;
             }
 
-            _gameObject = new JediumGameObject(this, additionalBehaviours, dbsnaps, _ownerID, _localID);
+            _gameObject = new JediumGameObject(this, additionalBehaviours, dbsnaps, _ownerId, _localId);
 
 
             conn.SpawnGameObject(_namePrefab, _nameNotOwnedPrefab, localId, ownerID, _bundleId, avatarId, this
@@ -202,7 +207,7 @@ namespace Server2
             if (MainSettings.CollectMessageStats)
                 MessageNum = MessageNum + messages.Length;
 
-            Console.WriteLine("___MESSAGEPACK");
+           
             _gameObject.ProcessBehaviourMessagePack(clientId, messages);
 
             return Task.FromResult(true);
@@ -267,7 +272,20 @@ namespace Server2
             return Task.FromResult(true);
         }
 
+        public Task SetBehaviourSnapshot(JediumBehaviourSnapshot snapshot)
+        {
+            _log.Info($"Setting snapshot for {snapshot.BehaviourType}");
+            _gameObject.MarkedForSave = true;
+            _gameObject.SetBehaviourFromSnapshot(snapshot);
+            List<JediumBehaviourDBSnapshot> snaps = _gameObject.GetDbSnapshots();
+            foreach (var s in snaps)
+            {
+                _log.Info($"Saving to DB: {s.LocalId}, {s.Type}");
+                _database.StoreDBBehaviour(s).Wait();
+            }
        
+            return Task.FromResult(true);
+        }
 
         #endregion
 

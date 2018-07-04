@@ -5,7 +5,9 @@ namespace Domain.BehaviourMessages
     //snapshot-> class. Used rarely, and class is more useful here
     public abstract class JediumBehaviourSnapshot
     {
+        [HideInEditor]
         public string BehaviourType;
+        [HideInEditor]
         public Guid LocalId;
 
         public JediumBehaviourSnapshot(string type, Guid localId)

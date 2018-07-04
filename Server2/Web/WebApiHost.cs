@@ -32,6 +32,7 @@ namespace Server2.Web
         protected override void PreStart()
         {
             var config = new HttpSelfHostConfiguration(_mainUrl);
+            config.MaxReceivedMessageSize = 2147483647; // use config for this value
             config.Routes.MapHttpRoute("Assets", "api/{controller}/{action}/{id}",
                 new {id = RouteParameter.Optional});
             //json by default

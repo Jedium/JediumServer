@@ -13,6 +13,8 @@ namespace Server2.Behaviours
         private readonly Dictionary<int, JediumBehaviour> _behaviours;
         public IGameObjectSelfAccessor Actor;
 
+        public bool MarkedForSave = false;
+
         //Мы предполагаем, что компонент Transform есть всегда
         public JediumGameObject(IGameObjectSelfAccessor actor, List<JediumBehaviourSnapshot> behaviours,
             Dictionary<string, JediumBehaviourDBSnapshot> db_snaps,
@@ -108,9 +110,43 @@ namespace Server2.Behaviours
         {
             List<JediumBehaviourDBSnapshot> ret = new List<JediumBehaviourDBSnapshot>();
 
-            foreach (var beh in _behaviours) ret.Add(beh.Value.GetDbSnapshot());
+            foreach (var beh in _behaviours)
+            {
+                var snap = beh.Value.GetDbSnapshot();
+                if (MarkedForSave)
+                    snap.SaveOnShutdown = true;
+                ret.Add(snap);
+            }
+
+            MarkedForSave = false;
 
             return ret;
+        }
+
+        public void SetBehaviourFromSnapshot(JediumBehaviourSnapshot snap)
+        {
+            var type = snap.BehaviourType;
+            
+            int index = TYPEBEHAVIOUR.GetTypeIndex(type);
+
+            if (index == -1) //todo - log error
+                return;
+
+            if (_behaviours.ContainsKey(index))
+            {
+                _behaviours[index].FromSnapshot(snap);
+            }
+            else
+            {
+                //adding new behaviour
+                Type behType = BehaviourTypeRegistry.BehaviourTypes[snap.BehaviourType];
+                JediumBehaviour plugin_beh =
+                    (JediumBehaviour)Activator.CreateInstance(behType, this);
+
+                plugin_beh.FromSnapshot(snap);
+                _behaviours.Add(index, plugin_beh);
+            }
+
         }
     }
 }

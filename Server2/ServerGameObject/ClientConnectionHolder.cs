@@ -22,6 +22,8 @@ namespace Server2
 
        private bool _working;
 
+       private readonly ResendMessage _tick = new ResendMessage();
+
        private Queue<JediumBehaviourMessage[]> _messageQueue;
 
         internal sealed class ResendMessage
@@ -38,7 +40,8 @@ namespace Server2
             _clientId = clientId;
 
             _client.GotAddress();
-          Self.Tell(new ResendMessage(),null);
+            // Self.Tell(new ResendMessage(),null);
+            Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(0), TimeSpan.FromMilliseconds(MainSettings.TickDelay), Self, _tick, ActorRefs.NoSender);
         }
 
         //TODO - maybe direct handler
@@ -103,20 +106,22 @@ namespace Server2
                }
            }
 
-           if (_working)
-           {
-               RunTask(async () =>
+           if (!_working)
                {
-                   await Task.Delay(MainSettings.TickDelay);
-                   Self.Tell(new ResendMessage(), null);
 
-               }, isReentrant: true);
+               //Console.WriteLine("___DESTROY FOR:" + _clientId);
+               //   _client.DestroyObject();
+               Self.GracefulStop(TimeSpan.FromSeconds(100), InterfacedPoisonPill.Instance).Wait();
+                //  RunTask(async () =>
+                //  {
+                //      await Task.Delay(MainSettings.TickDelay);
+                //      Self.Tell(new ResendMessage(), null);
+                //
+                //  }, isReentrant: true);
            }
            else
            {
-               Console.WriteLine("___DESTROY FOR:"+_clientId);
-            //   _client.DestroyObject();
-               Self.GracefulStop(TimeSpan.FromSeconds(100), InterfacedPoisonPill.Instance).Wait();
+             
            }
        }
    }

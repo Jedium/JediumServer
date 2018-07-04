@@ -111,6 +111,7 @@ namespace Server2.database
         {
             if (snap.SaveOnShutdown)
             {
+                _logger.Info($"Saving behaviour for {snap.LocalId}, type:{snap.Type}");
             var filter = Builders<JediumBehaviourDBSnapshot>.Filter.And(
                 Builders<JediumBehaviourDBSnapshot>.Filter.Eq("LocalId", snap.LocalId),
                 Builders<JediumBehaviourDBSnapshot>.Filter.Eq("Type", snap.Type));
@@ -145,6 +146,14 @@ namespace Server2.database
 
             return Task.FromResult(ret);
         }
+
+        public Task DeleteObjectBehaviours(Guid localId)
+        {
+            var collection = database.GetCollection<JediumBehaviourDBSnapshot>("newbehaviours");
+            collection.DeleteMany(x => x.LocalId == localId);
+            return Task.FromResult(true);
+        }
+
         #endregion
 
         #region ServerObject
@@ -166,13 +175,22 @@ namespace Server2.database
             return Task.FromResult(true);
         }
 
+        Task<List<DatabaseObject>> IDatabaseAgent.GetAllServerObjects()
+        {
+            var collection = database.GetCollection<DatabaseObject>("objects");
+
+            var objects = collection.Find(_ => true).ToList();
+
+            return Task.FromResult(objects);
+        }
+
         #endregion
 
 
         #region SceneObject
         Task<List<DatabaseSceneObject>> IDatabaseAgent.GetObjectsScene(Guid sceneId)
         {
-            var filter = Builders<DatabaseSceneObject>.Filter.Eq("SceneID", sceneId);
+            var filter = Builders<DatabaseSceneObject>.Filter.Eq("SceneId", sceneId);
             var collection = database.GetCollection<DatabaseSceneObject>("sceneObjects");
 
             var document = collection.Find(filter).ToList();
@@ -185,6 +203,13 @@ namespace Server2.database
             var collection = database.GetCollection<DatabaseSceneObject>("sceneObjects");
             collection.InsertOne(sceneObj);
 
+            return Task.FromResult(true);
+        }
+
+        Task IDatabaseAgent.DeleteSceneObject(Guid localId)
+        {
+            var collection = database.GetCollection<DatabaseSceneObject>("sceneObjects");
+            collection.DeleteOne(x => x.LocalId == localId);
             return Task.FromResult(true);
         }
 
